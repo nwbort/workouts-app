@@ -4,10 +4,6 @@ on:
   push:
   workflow_dispatch:
 
-# Publishing a release needs write access to the repo's contents.
-permissions:
-  contents: write
-
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
@@ -15,6 +11,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.apk.outputs.version }}
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -40,13 +38,12 @@ jobs:
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk "dist/workouts-${version}.apk"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "path=dist/workouts-${version}.apk" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
           name: workouts-${{ steps.apk.outputs.version }}
-          path: ${{ steps.apk.outputs.path }}
+          path: dist/
 
       # The UI test drives every screen and saves a PNG of each.
       - name: Upload screenshots
@@ -57,21 +54,89 @@ jobs:
           path: app/build/screenshots/
           if-no-files-found: ignore
 
-      # A release per build is the easy way onto the phone: open the repo's
-      # Releases page in the phone's browser and tap the .apk. Builds from
-      # any branch other than main are marked pre-release.
+      - name: Upload build reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-reports
+          path: |
+            app/build/reports/
+            build/reports/
+          if-no-files-found: ignore
+
+  # The release APK, after R8, opened on a real Android emulator. Nothing is
+  # published unless the app starts and stays up.
+  launch:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - "system-images;android-36;google_apis;x86_64"
+          - "system-images;android-37.0;google_apis;x86_64"
+          - "system-images;android-37.2;google_apis_ps16k;x86_64"
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Download APK
+        uses: actions/download-artifact@v8
+        with:
+          name: workouts-${{ needs.build.outputs.version }}
+          path: dist/
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Launch on the emulator
+        run: .github/scripts/smoke-test.sh "${{ matrix.image }}" dist/workouts-${{ needs.build.outputs.version }}.apk launch/
+
+      - name: Name the results after the image
+        if: always()
+        id: name
+        run: echo "name=launch-$(echo '${{ matrix.image }}' | cut -d';' -f2,3 | tr ';' '-')" >> "$GITHUB_OUTPUT"
+
+      - name: Upload screenshot and logcat
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: launch/
+          if-no-files-found: ignore
+
+  # A release per build is the easy way onto the phone: open the repo's
+  # Releases page in the phone's browser and tap the .apk. Builds from any
+  # branch other than main are marked pre-release.
+  publish:
+    needs: [build, launch]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Download APK
+        uses: actions/download-artifact@v8
+        with:
+          name: workouts-${{ needs.build.outputs.version }}
+          path: dist/
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.apk.outputs.version }}
-          APK: ${{ steps.apk.outputs.path }}
+          VERSION: ${{ needs.build.outputs.version }}
           BRANCH: ${{ github.ref_name }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           subject="$(git log -1 --pretty=%s)"
           flags=()
           if [ "$BRANCH" != "$DEFAULT_BRANCH" ]; then flags+=(--prerelease); fi
-          gh release create "v${VERSION}" "$APK" \
+          gh release create "v${VERSION}" "dist/workouts-${VERSION}.apk" \
             --target "$GITHUB_SHA" \
             --title "Workouts ${VERSION}" \
             --notes "Built from \`${BRANCH}\` at ${GITHUB_SHA::7}: ${subject}" \
@@ -87,13 +152,3 @@ jobs:
           while read -r tag; do
             gh release delete "$tag" --yes --cleanup-tag
           done
-
-      - name: Upload build reports on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-reports
-          path: |
-            app/build/reports/
-            build/reports/
-          if-no-files-found: ignore
