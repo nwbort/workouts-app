@@ -39,7 +39,8 @@ object CrashReport {
     private fun file(context: Context) = File(context.filesDir, "last-crash.txt")
 
     fun install(context: Context) {
-        val app = context.applicationContext
+        // Called from attachBaseContext, before applicationContext is set.
+        val app = context.applicationContext ?: context
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             save(app, error, thread)

@@ -84,6 +84,10 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+    // Glance pulls in WorkManager 2.7 and Room 2.2, whose keep rules predate R8
+    // full mode: the shrunk APK crashed at launch unable to construct
+    // WorkManager's database. Current versions ship rules that work.
+    implementation(libs.androidx.work.runtime)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 

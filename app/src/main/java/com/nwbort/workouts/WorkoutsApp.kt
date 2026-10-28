@@ -12,9 +12,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class WorkoutsApp : Application() {
+    // Before onCreate, so it also catches crashes in library start-up code
+    // (androidx.startup content providers run between the two).
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+        CrashReport.install(this)
+    }
+
     override fun onCreate() {
         super.onCreate()
-        CrashReport.install(this)
         // A failure here would kill every launch before anything could show
         // it, so record it instead and let MainActivity put it on screen.
         try {
