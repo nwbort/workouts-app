@@ -98,4 +98,5 @@ dependencies {
     // Newer than the Compose test library pulls in: 3.5 can't idle on Android 17.
     testImplementation(libs.androidx.test.espresso.core)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.glance.appwidget.testing)
 }

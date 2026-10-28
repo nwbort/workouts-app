@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import com.nwbort.workouts.data.Repository
 import com.nwbort.workouts.notify.DailyScheduler
+import com.nwbort.workouts.video.Thumbnails
 import com.nwbort.workouts.video.VideoLibrary
 import com.nwbort.workouts.widget.TodayWidget
 import kotlinx.coroutines.CoroutineScope
@@ -42,10 +43,13 @@ object Graph {
         private set
     lateinit var videos: VideoLibrary
         private set
+    lateinit var thumbnails: Thumbnails
+        private set
 
     fun init(context: Context) {
         if (::repo.isInitialized) return
         repo = Repository(context.applicationContext)
         videos = VideoLibrary(context.applicationContext, repo, scope)
+        thumbnails = Thumbnails(context.applicationContext)
     }
 }

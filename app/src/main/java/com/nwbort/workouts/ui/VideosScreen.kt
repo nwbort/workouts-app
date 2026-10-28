@@ -3,13 +3,15 @@ package com.nwbort.workouts.ui
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,13 +20,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -37,18 +41,23 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.nwbort.workouts.data.VideoEntry
+import com.nwbort.workouts.video.Thumbnails
 import com.nwbort.workouts.video.VideoLibrary
 import com.nwbort.workouts.video.VideoState
 
@@ -57,8 +66,8 @@ import com.nwbort.workouts.video.VideoState
 fun VideosScreen(
     entries: List<VideoEntry>,
     state: VideoState,
+    thumbnails: Thumbnails,
     onChooseFolder: (Uri) -> Unit,
-    onRescan: () -> Unit,
     onLink: (String, Uri?) -> Unit,
     onPlay: (VideoEntry) -> Unit,
     modifier: Modifier = Modifier,
@@ -77,14 +86,12 @@ fun VideosScreen(
 
     Column(modifier.fillMaxSize()) {
         TopAppBar(title = { Text("Videos") }, windowInsets = WindowInsets(0))
+        if (state.scanning) LinearProgressIndicator(Modifier.fillMaxWidth())
         LazyColumn(Modifier.fillMaxSize()) {
-            item {
-                FolderCard(
-                    state = state,
-                    total = entries.size,
-                    onChoose = { pickFolder.launch(state.tree) },
-                    onRescan = onRescan,
-                )
+            // Once a folder is chosen it's managed from Settings; this only
+            // comes back if Android stops letting the app read it.
+            if (state.tree == null || !state.treeReadable) {
+                item { FolderCard(state, onChoose = { pickFolder.launch(state.tree) }) }
             }
             entries.groupBy { it.group }.forEach { (group, items) ->
                 item(key = "g:$group") {
@@ -98,9 +105,10 @@ fun VideosScreen(
                 items(items, key = { it.id }) { entry ->
                     VideoRow(
                         entry = entry,
-                        found = entry.id in state.found,
+                        uri = state.found[entry.id],
                         linked = entry.id in state.linked,
                         searched = state.tree != null && !state.scanning,
+                        thumbnails = thumbnails,
                         onPlay = { onPlay(entry) },
                         onLink = {
                             linking = entry.id
@@ -116,7 +124,7 @@ fun VideosScreen(
 }
 
 @Composable
-private fun FolderCard(state: VideoState, total: Int, onChoose: () -> Unit, onRescan: () -> Unit) {
+private fun FolderCard(state: VideoState, onChoose: () -> Unit) {
     val tree = state.tree
     Card(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -133,34 +141,17 @@ private fun FolderCard(state: VideoState, total: Int, onChoose: () -> Unit, onRe
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                when {
-                    tree == null ->
-                        "Choose the folder your downloaded videos are in (for example Movies/Streek). " +
-                            "Android remembers the choice, so this is a one-off. Videos are matched to " +
-                            "sessions by file name, like strength-workout-9.mp4."
-                    !state.treeReadable -> "This folder can't be read any more. Choose it again."
-                    else -> "${state.found.size} of $total videos found. Anything missing can be " +
-                        "linked to a file by hand from its menu."
+                if (tree == null) {
+                    "Choose the folder your downloaded videos are in (for example Movies/Streek). " +
+                        "Android remembers the choice, so this is a one-off; you can change it later " +
+                        "in Settings. Videos are matched to sessions by file name, like strength-workout-9.mp4."
+                } else {
+                    "This folder can't be read any more. Choose it again."
                 },
                 style = MaterialTheme.typography.bodyMedium,
             )
-            if (state.scanning) {
-                Spacer(Modifier.height(10.dp))
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
             Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (tree == null) {
-                    Button(onClick = onChoose) { Text("Choose folder") }
-                } else {
-                    OutlinedButton(onClick = onChoose) { Text("Change folder") }
-                    OutlinedButton(onClick = onRescan) {
-                        Icon(Icons.Filled.Refresh, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Rescan")
-                    }
-                }
-            }
+            Button(onClick = onChoose) { Text(if (tree == null) "Choose folder" else "Choose again") }
         }
     }
 }
@@ -168,35 +159,31 @@ private fun FolderCard(state: VideoState, total: Int, onChoose: () -> Unit, onRe
 @Composable
 private fun VideoRow(
     entry: VideoEntry,
-    found: Boolean,
+    /** Where the video is on the phone, if it was found. */
+    uri: Uri?,
     linked: Boolean,
     /** Whether a folder has been looked through yet; until then nothing is "missing". */
     searched: Boolean,
+    thumbnails: Thumbnails,
     onPlay: () -> Unit,
     onLink: () -> Unit,
     onUnlink: () -> Unit,
 ) {
     var menu by rememberSaveable { mutableStateOf(false) }
+    val missing = uri == null && searched
     ListItem(
-        modifier = if (found) Modifier.clickable(onClick = onPlay) else Modifier,
+        modifier = if (uri != null) Modifier.clickable(onClick = onPlay) else Modifier,
         headlineContent = { Text(entry.title) },
-        supportingContent = {
-            Text(
-                when {
-                    linked -> "Linked by hand"
-                    found || !searched -> entry.file
-                    else -> "Not found — expected ${entry.file}"
-                },
-                color = if (found || !searched) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
-            )
+        supportingContent = when {
+            linked -> {
+                { Text("Linked by hand", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+            missing -> {
+                { Text("Not found on this phone", color = MaterialTheme.colorScheme.error) }
+            }
+            else -> null
         },
-        leadingContent = {
-            Icon(
-                Icons.Filled.PlayArrow,
-                null,
-                tint = if (found) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-            )
-        },
+        leadingContent = { Thumbnail(uri, thumbnails) },
         trailingContent = {
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "More") }
@@ -218,4 +205,31 @@ private fun VideoRow(
         },
         colors = ListItemDefaults.colors(),
     )
+}
+
+@Composable
+private fun Thumbnail(uri: Uri?, thumbnails: Thumbnails) {
+    val frame by produceState(uri?.let(thumbnails::cached), uri) {
+        if (value == null && uri != null) value = thumbnails.load(uri)
+    }
+    Box(
+        Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        contentAlignment = Alignment.Center,
+    ) {
+        val image = frame
+        if (image != null) {
+            Image(image.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        }
+        if (uri == null) {
+            Icon(Icons.Filled.VideocamOff, null, tint = MaterialTheme.colorScheme.outline)
+        } else {
+            Icon(
+                Icons.Filled.PlayArrow,
+                null,
+                Modifier.size(28.dp).background(Color.Black.copy(alpha = 0.45f), CircleShape).padding(3.dp),
+                tint = Color.White,
+            )
+        }
+    }
 }
