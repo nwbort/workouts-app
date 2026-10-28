@@ -14,10 +14,17 @@ import kotlinx.coroutines.launch
 class WorkoutsApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        Graph.init(this)
-        Graph.scope.launch {
-            DailyScheduler.schedule(this@WorkoutsApp)
-            TodayWidget.publishPreview(this@WorkoutsApp)
+        CrashReport.install(this)
+        // A failure here would kill every launch before anything could show
+        // it, so record it instead and let MainActivity put it on screen.
+        try {
+            Graph.init(this)
+            Graph.scope.launch {
+                DailyScheduler.schedule(this@WorkoutsApp)
+                TodayWidget.publishPreview(this@WorkoutsApp)
+            }
+        } catch (e: Throwable) {
+            CrashReport.save(this, e)
         }
     }
 }

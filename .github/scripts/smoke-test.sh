@@ -15,7 +15,9 @@ mkdir -p "$out"
 
 sdk="${ANDROID_HOME:?}"
 export PATH="$sdk/platform-tools:$sdk/emulator:$PATH"
-yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "$image" emulator platform-tools > /dev/null
+# `yes` dies of SIGPIPE once sdkmanager stops reading, which pipefail would
+# otherwise count as the install failing.
+{ yes || true; } | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "$image" emulator platform-tools > "$out/sdkmanager.log"
 echo no | "$sdk/cmdline-tools/latest/bin/avdmanager" create avd --force -n smoke -k "$image"
 
 emulator -avd smoke -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect \

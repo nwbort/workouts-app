@@ -10,6 +10,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nwbort.workouts.ui.AppViewModel
@@ -22,7 +25,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val crash = CrashReport.read(this)
         setContent {
+            // After a crash, show what happened before touching any app state.
+            var report by remember { mutableStateOf(crash) }
+            val shown = report
+            if (shown != null) {
+                CrashScreen(shown, onDismiss = { CrashReport.clear(this); report = null })
+                return@setContent
+            }
             WorkoutsTheme {
                 LifecycleResumeEffect(Unit) {
                     vm.onResume()
