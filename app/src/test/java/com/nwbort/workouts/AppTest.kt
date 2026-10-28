@@ -73,7 +73,7 @@ class AppTest {
 
         // One video linked by hand, so the list has a playable row (and tries
         // for its thumbnail) next to the ones without a folder.
-        runBlocking { Graph.repo.updateSettings { linkVideo("1015976604", "content://none/strength-workout-9.mp4") } }
+        runBlocking { Graph.repo.updateSettings { linkVideo("1014769015", "content://none/strength-workout-1.mp4") } }
         compose.onNodeWithText("Videos").performClick()
         waitForText("Linked by hand")
         shot("5-videos")
