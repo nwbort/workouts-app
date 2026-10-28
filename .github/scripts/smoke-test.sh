@@ -25,7 +25,18 @@ trap 'status=$?; if [ $status -ne 0 ]; then echo "--- emulator.log (tail)"; tail
 echo "Installing $image"
 # `yes` dies of SIGPIPE once sdkmanager stops reading, which pipefail would
 # otherwise count as the install failing.
-{ yes || true; } | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "$image" emulator platform-tools > "$out/sdkmanager.log"
+# The download sometimes arrives corrupt ("Error on ZipFile unknown archive"),
+# and sdkmanager only warns, so check the image landed and retry if not.
+image_dir="$sdk/${image//;//}"
+for attempt in 1 2 3; do
+  { yes || true; } | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "$image" emulator platform-tools > "$out/sdkmanager.log" || true
+  [ -f "$image_dir/package.xml" ] && break
+  echo "::warning::$image didn't install (attempt $attempt)"
+  tail -20 "$out/sdkmanager.log"
+  rm -rf "$image_dir"
+  if [ "$attempt" = 3 ]; then echo "::error::Couldn't install $image"; exit 1; fi
+  sleep 10
+done
 echo no | "$sdk/cmdline-tools/latest/bin/avdmanager" create avd --force -n smoke -k "$image"
 echo "AVDs: $(emulator -list-avds | tr '\n' ' ')"
 
