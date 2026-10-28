@@ -6,7 +6,11 @@ import android.app.NotificationManager
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -86,8 +90,8 @@ class AppTest {
         shot("7-settings-videos")
 
         // Tapping the widget lands on today's page from anywhere, even with a
-        // screen open on top of another tab.
-        compose.onNodeWithText("Plan").performClick()
+        // screen open on top of another tab. (Settings has a "Plan" heading too.)
+        compose.onNode(hasText("Plan") and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)).performClick()
         compose.onNodeWithContentDescription("Week 11 notes").performClick()
         waitForText("Week 11 notes")
         compose.runOnUiThread { compose.activity.onNewIntent(MainActivity.showToday(compose.activity)) }
