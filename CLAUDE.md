@@ -6,7 +6,8 @@ Guidance for Claude when working in this repository.
 
 The APK the user installs comes from GitHub Actions: every push runs
 `.github/workflows/build.yml`, which runs the unit tests, builds the release
-APK and publishes it as a GitHub release (and an artifact). After pushing,
+APK, launches it on an emulator and uploads it as an artifact. Pushes to
+`main` also publish it as a GitHub release; other branches don't. After pushing,
 check that workflow run and fix it if it's red.
 
 Building locally to check a change before pushing is fine
