@@ -15,6 +15,9 @@ mkdir -p "$out"
 
 sdk="${ANDROID_HOME:?}"
 export PATH="$sdk/platform-tools:$sdk/emulator:$PATH"
+# avdmanager and the emulator disagree on where AVDs live by default; pin it.
+export ANDROID_AVD_HOME="$HOME/.android/avd"
+mkdir -p "$ANDROID_AVD_HOME"
 
 # Whatever goes wrong, show the emulator's own account of it.
 trap 'status=$?; if [ $status -ne 0 ]; then echo "--- emulator.log (tail)"; tail -60 "$out/emulator.log" 2>/dev/null || true; fi' EXIT
@@ -24,7 +27,7 @@ echo "Installing $image"
 # otherwise count as the install failing.
 { yes || true; } | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "$image" emulator platform-tools > "$out/sdkmanager.log"
 echo no | "$sdk/cmdline-tools/latest/bin/avdmanager" create avd --force -n smoke -k "$image"
-ls -l /dev/kvm
+echo "AVDs: $(emulator -list-avds | tr '\n' ' ')"
 
 echo "Starting the emulator"
 emulator -avd smoke -no-window -no-audio -no-boot-anim -no-snapshot -no-metrics -gpu swiftshader_indirect \
