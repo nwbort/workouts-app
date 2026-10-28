@@ -2,8 +2,10 @@ package com.nwbort.workouts
 
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.glance.appwidget.testing.unit.GlanceAppWidgetUnitTest
 import androidx.glance.appwidget.testing.unit.runGlanceAppWidgetUnitTest
 import androidx.glance.testing.unit.hasText
+import androidx.glance.testing.unit.hasTextEqualTo
 import androidx.test.core.app.ApplicationProvider
 import com.nwbort.workouts.data.Plan
 import com.nwbort.workouts.data.Schedule
@@ -39,7 +41,7 @@ class WidgetTest {
     // Week 11's Wednesday, "Run 10km + Strength"; Thursday is "Run 20km".
     private val wed = LocalDate.of(2026, 10, 28)
 
-    private fun render(today: LocalDate, done: Set<String>, check: androidx.glance.appwidget.testing.unit.GlanceAppWidgetUnitTest.() -> Unit) =
+    private fun render(today: LocalDate, done: Set<String>, check: GlanceAppWidgetUnitTest.() -> Unit) =
         runGlanceAppWidgetUnitTest {
             setContext(ApplicationProvider.getApplicationContext())
             setAppWidgetSize(DpSize(250.dp, 180.dp))
@@ -54,26 +56,26 @@ class WidgetTest {
 
     @Test
     fun shows_only_today_while_sessions_are_left() = render(wed, emptySet()) {
-        onNode(hasText("Run 10km + Strength")).assertExists()
-        onNode(hasText("○  Strength Workout 9")).assertExists()
-        onAllNodes(hasText("Tomorrow")).assertCountEquals(0)
+        onNode(hasTextEqualTo("Run 10km + Strength")).assertExists()
+        onNode(hasTextEqualTo("○  Strength Workout 9")).assertExists()
+        onAllNodes(hasTextEqualTo("Tomorrow")).assertCountEquals(0)
     }
 
     @Test
     fun ticks_today_and_shows_tomorrow_once_done() = render(wed, allDone(wed)) {
-        onNode(hasText("✓  Run 10km + Strength")).assertExists()
-        onNode(hasText("Tomorrow")).assertExists()
-        onNode(hasText("Run 20km")).assertExists()
+        onNode(hasTextEqualTo("✓  Run 10km + Strength")).assertExists()
+        onNode(hasTextEqualTo("Tomorrow")).assertExists()
+        onNode(hasTextEqualTo("Run 20km")).assertExists()
         // Today's own sessions make way for tomorrow's.
-        onAllNodes(hasText("Strength Workout 9", substring = true)).assertCountEquals(0)
+        onAllNodes(hasText("Strength Workout 9")).assertCountEquals(0)
     }
 
     @Test
     fun rest_days_show_tomorrow_too() {
         val rest = generateSequence(wed) { it.plusDays(1) }.first { schedule.dayAt(it)?.isRest == true }
         render(rest, emptySet()) {
-            onNode(hasText("Tomorrow")).assertExists()
-            onNode(hasText(schedule.dayAt(rest.plusDays(1))!!.title)).assertExists()
+            onNode(hasTextEqualTo("Tomorrow")).assertExists()
+            onNode(hasTextEqualTo(schedule.dayAt(rest.plusDays(1))!!.title)).assertExists()
         }
     }
 }
