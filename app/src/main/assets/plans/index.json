@@ -1,0 +1,542 @@
+[
+ {
+  "slug": "100-mile-trail-training-plan",
+  "title": "100 Mile Trail Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "100km-trail-training-plan",
+  "title": "100km Trail Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "10km-road-training-plan",
+  "title": "10km Road Training Plan",
+  "weeks": 8,
+  "level": "advanced",
+  "race": {
+   "week": 8,
+   "day": 6
+  }
+ },
+ {
+  "slug": "10km-trail-training-plan",
+  "title": "10km Trail Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 5
+  }
+ },
+ {
+  "slug": "21km-trail-training-plan",
+  "title": "21km Trail Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 5
+  }
+ },
+ {
+  "slug": "50km-trail-training-plan",
+  "title": "50km Trail Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "5k-pb-training-plan",
+  "title": "5k PB Training Plan",
+  "weeks": 8,
+  "level": "advanced",
+  "race": {
+   "week": 8,
+   "day": 6
+  }
+ },
+ {
+  "slug": "base-training-plan",
+  "title": "Base Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": null
+ },
+ {
+  "slug": "bondi-to-manly-20km-relay-training-plan",
+  "title": "Bondi to Manly 20km Relay Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "bondi-to-manly-40km-relay-training-plan",
+  "title": "Bondi to Manly 40km Relay Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "bondi-to-manly-ultra-training-plan",
+  "title": "Bondi to Manly Ultra Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "bouddi-coastal-run-14km-training-plan",
+  "title": "Bouddi Coastal Run 14km Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 5
+  }
+ },
+ {
+  "slug": "bouddi-coastal-run-21km-training-plan",
+  "title": "Bouddi Coastal Run 21km Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 5
+  }
+ },
+ {
+  "slug": "calf-muscle-strain-rehab-plan",
+  "title": "Calf Muscle Strain Rehab Plan",
+  "weeks": 10,
+  "level": "single",
+  "race": null
+ },
+ {
+  "slug": "calf-muscle-tear-rehab-plan",
+  "title": "Calf Muscle Tear Rehab Plan",
+  "weeks": 11,
+  "level": "single",
+  "race": null
+ },
+ {
+  "slug": "city-to-surf-training-plan",
+  "title": "City2Surf Training Plan",
+  "weeks": 8,
+  "level": "advanced",
+  "race": {
+   "week": 8,
+   "day": 6
+  }
+ },
+ {
+  "slug": "coastal-classic-training-plan",
+  "title": "Coastal Classic Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "couch-to-3km",
+  "title": "Couch to 3km",
+  "weeks": 4,
+  "level": "single",
+  "race": null
+ },
+ {
+  "slug": "cross-training-plan",
+  "title": "Cross Training Plan",
+  "weeks": 4,
+  "level": "single",
+  "race": null
+ },
+ {
+  "slug": "half-marathon-training-plan",
+  "title": "Half Marathon Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 6
+  }
+ },
+ {
+  "slug": "jabulani-challenge-12km-training-plan",
+  "title": "Jabulani Challenge 12km Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 5
+  }
+ },
+ {
+  "slug": "jabulani-challenge-22km-training-plan",
+  "title": "Jabulani Challenge 22km Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "jabulani-challenge-45km-training-plan",
+  "title": "Jabulani Challenge 45km Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "kosci-miler-training-plan",
+  "title": "Kosci Miler Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 4
+  }
+ },
+ {
+  "slug": "kosci100-training-plan-2",
+  "title": "Kosci100 Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 4
+  }
+ },
+ {
+  "slug": "kosci30-training-plan",
+  "title": "Kosci30 Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 3
+  }
+ },
+ {
+  "slug": "kosci50-training-plan",
+  "title": "Kosci50 Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 3
+  }
+ },
+ {
+  "slug": "marathon-training-plan",
+  "title": "Marathon Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 6
+  }
+ },
+ {
+  "slug": "race-hub-australia-5k-pb-training-plan",
+  "title": "Race Hub Australia –  5k PB Training Plan",
+  "weeks": 8,
+  "level": "advanced",
+  "race": {
+   "week": 8,
+   "day": 6
+  }
+ },
+ {
+  "slug": "race-hub-australia-10km-training-plan",
+  "title": "Race Hub Australia – 10km Training Plan",
+  "weeks": 8,
+  "level": "advanced",
+  "race": {
+   "week": 8,
+   "day": 6
+  }
+ },
+ {
+  "slug": "race-hub-australia-couch-to-3km",
+  "title": "Race Hub Australia – Couch to 3km",
+  "weeks": 4,
+  "level": "single",
+  "race": null
+ },
+ {
+  "slug": "race-hub-australia-half-marathon-training-plan",
+  "title": "Race Hub Australia – Half Marathon Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 6
+  }
+ },
+ {
+  "slug": "race-hub-australia-marathon-training-plan",
+  "title": "Race Hub Australia – Marathon Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 6
+  }
+ },
+ {
+  "slug": "race-hub-australia-zero-to-5k",
+  "title": "Race Hub Australia – Zero to 5k",
+  "weeks": 8,
+  "level": "single",
+  "race": null
+ },
+ {
+  "slug": "raffertys-coastal-run-12km-training-plan",
+  "title": "Raffertys Coastal Run 12km Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 5
+  }
+ },
+ {
+  "slug": "raffertys-coastal-run-22km-training-plan",
+  "title": "Raffertys Coastal Run 22km Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "raffertys-coastal-run-35km-training-plan",
+  "title": "Raffertys Coastal Run 35km Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "return-to-running-plan",
+  "title": "Return to Running Plan",
+  "weeks": 10,
+  "level": "single",
+  "race": null
+ },
+ {
+  "slug": "six-foot-track-training-plan",
+  "title": "Six Foot Track Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "srf-marathon-training-plan",
+  "title": "SRF Marathon Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "srf10-training-plan",
+  "title": "SRF10 Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 6
+  }
+ },
+ {
+  "slug": "srf15-training-plan",
+  "title": "SRF15 Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 6
+  }
+ },
+ {
+  "slug": "srf30",
+  "title": "SRF30 Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "srf5-training-plan",
+  "title": "SRF5 Training Plan",
+  "weeks": 8,
+  "level": "advanced",
+  "race": {
+   "week": 8,
+   "day": 6
+  }
+ },
+ {
+  "slug": "sydney-half-marathon-training-plan",
+  "title": "Sydney Half Marathon Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 6
+  }
+ },
+ {
+  "slug": "tarawera-miler-training-plan",
+  "title": "Tarawera Miler Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "tarawera-t102-training-plan",
+  "title": "Tarawera T102 Training Plan",
+  "weeks": 10,
+  "level": "advanced",
+  "race": null
+ },
+ {
+  "slug": "tarawera-t14-training-plan",
+  "title": "Tarawera T14 Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 6
+  }
+ },
+ {
+  "slug": "tarawera-t21-training-plan",
+  "title": "Tarawera T21 Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "tarawera-t50-training-plan",
+  "title": "Tarawera T50 Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "tcs-sydney-marathon-training-plan",
+  "title": "TCS Sydney Marathon Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 6
+  }
+ },
+ {
+  "slug": "uta-miler-training-plan",
+  "title": "UTA Miler Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "uta100-training-plan",
+  "title": "UTA100 Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "uta11-training-plan",
+  "title": "UTA11 Training Plan",
+  "weeks": 12,
+  "level": "advanced",
+  "race": {
+   "week": 12,
+   "day": 3
+  }
+ },
+ {
+  "slug": "uta22-training-plan",
+  "title": "UTA22 Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 4
+  }
+ },
+ {
+  "slug": "uta50-training-plan",
+  "title": "UTA50 Training Plan",
+  "weeks": 16,
+  "level": "advanced",
+  "race": {
+   "week": 16,
+   "day": 5
+  }
+ },
+ {
+  "slug": "zero-to-5km",
+  "title": "Zero to 5km",
+  "weeks": 8,
+  "level": "single",
+  "race": null
+ }
+]
