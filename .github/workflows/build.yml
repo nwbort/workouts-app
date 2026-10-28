@@ -44,6 +44,7 @@ jobs:
         with:
           name: workouts-${{ steps.apk.outputs.version }}
           path: dist/
+          retention-days: 1
 
       # The UI test drives every screen and saves a PNG of each.
       - name: Upload screenshots
@@ -52,6 +53,7 @@ jobs:
         with:
           name: screenshots
           path: app/build/screenshots/
+          retention-days: 1
           if-no-files-found: ignore
 
       - name: Upload build reports on failure
@@ -62,6 +64,7 @@ jobs:
           path: |
             app/build/reports/
             build/reports/
+          retention-days: 1
           if-no-files-found: ignore
 
   # The release APK, after R8, opened on a real Android emulator. Nothing is
@@ -99,6 +102,7 @@ jobs:
         with:
           name: launch
           path: launch/
+          retention-days: 1
           if-no-files-found: ignore
 
   # A release per build is the easy way onto the phone: open the repo's
