@@ -105,11 +105,12 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
 
-  # A release per build is the easy way onto the phone: open the repo's
-  # Releases page in the phone's browser and tap the .apk. Builds from any
-  # branch other than main are marked pre-release.
+  # A release per main build is the easy way onto the phone: open the repo's
+  # Releases page in the phone's browser and tap the .apk. Other branches
+  # stop at the APK artifact.
   publish:
     needs: [build, launch]
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -127,17 +128,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.build.outputs.version }}
-          BRANCH: ${{ github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           subject="$(git log -1 --pretty=%s)"
-          flags=()
-          if [ "$BRANCH" != "$DEFAULT_BRANCH" ]; then flags+=(--prerelease); fi
           gh release create "v${VERSION}" "dist/workouts-${VERSION}.apk" \
             --target "$GITHUB_SHA" \
             --title "Workouts ${VERSION}" \
-            --notes "Built from \`${BRANCH}\` at ${GITHUB_SHA::7}: ${subject}" \
-            "${flags[@]}"
+            --notes "Built from \`main\` at ${GITHUB_SHA::7}: ${subject}"
 
       # Keep the Releases page short: the ten newest builds.
       - name: Prune old releases
