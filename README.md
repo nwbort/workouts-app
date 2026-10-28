@@ -89,8 +89,10 @@ new APK.
 ## Building
 
 GitHub Actions (`.github/workflows/build.yml`) runs on every push. It runs the
-tests, builds the release APK, uploads it as an artifact and publishes it as a
-release, keeping the ten newest.
+tests and builds the release APK. Then it installs that APK on an Android 16
+emulator, opens it, and checks the app is still running 20 seconds later
+(screenshot and logcat in the `launch` artifact). Only then does it publish
+the release, keeping the ten newest.
 
 Locally, with JDK 21 and the Android SDK:
 

@@ -70,13 +70,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        image:
-          - "system-images;android-36;google_apis;x86_64"
-          - "system-images;android-37.0;google_apis;x86_64"
-          - "system-images;android-37.2;google_apis_ps16k;x86_64"
+    env:
+      # One emulator, to keep Actions minutes down: the oldest Android the app
+      # supports, which also boots fastest.
+      IMAGE: "system-images;android-36;google_apis;x86_64"
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -94,18 +91,13 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Launch on the emulator
-        run: .github/scripts/smoke-test.sh "${{ matrix.image }}" dist/workouts-${{ needs.build.outputs.version }}.apk launch/
-
-      - name: Name the results after the image
-        if: always()
-        id: name
-        run: echo "name=launch-$(echo '${{ matrix.image }}' | cut -d';' -f2,3 | tr ';' '-')" >> "$GITHUB_OUTPUT"
+        run: .github/scripts/smoke-test.sh "$IMAGE" dist/workouts-${{ needs.build.outputs.version }}.apk launch/
 
       - name: Upload screenshot and logcat
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.name.outputs.name }}
+          name: launch
           path: launch/
           if-no-files-found: ignore
 
