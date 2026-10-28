@@ -1,6 +1,8 @@
 package com.nwbort.workouts
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -25,6 +27,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (savedInstanceState == null) handle(intent)
         val crash = CrashReport.read(this)
         setContent {
             // After a crash, show what happened before touching any app state.
@@ -45,6 +48,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Public so the UI test can deliver one the way the launcher would.
+    public override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handle(intent)
+    }
+
+    private fun handle(intent: Intent) {
+        if (intent.action == ACTION_SHOW_TODAY) vm.showToday()
+    }
+
     /** The morning reminder is on by default; ask for the permission it needs, once. */
     @androidx.compose.runtime.Composable
     private fun AskForNotificationsOnce() {
@@ -57,5 +70,18 @@ class MainActivity : ComponentActivity() {
                 launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+    }
+
+    companion object {
+        private const val ACTION_SHOW_TODAY = "com.nwbort.workouts.SHOW_TODAY"
+
+        /**
+         * Opens the app on today's page, whatever it was last showing: the
+         * widget and the morning reminder both use this. Clears anything
+         * stacked on top (like the player) and reuses the running activity.
+         */
+        fun showToday(context: Context): Intent = Intent(context, MainActivity::class.java)
+            .setAction(ACTION_SHOW_TODAY)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
     }
 }

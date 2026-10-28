@@ -85,6 +85,15 @@ class AppTest {
         compose.waitForIdle()
         shot("7-settings-videos")
 
+        // Tapping the widget lands on today's page from anywhere, even with a
+        // screen open on top of another tab.
+        compose.onNodeWithText("Plan").performClick()
+        compose.onNodeWithContentDescription("Week 11 notes").performClick()
+        waitForText("Week 11 notes")
+        compose.runOnUiThread { compose.activity.onNewIntent(MainActivity.showToday(compose.activity)) }
+        waitForText("1 of 3 done")
+        assertEquals(0, compose.onAllNodesWithText("Week 11 notes").fetchSemanticsNodes().size)
+
         // The morning notification carries the same title as the calendar event.
         val app = compose.activity.application
         shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)

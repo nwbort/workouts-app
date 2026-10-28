@@ -9,11 +9,12 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.action.actionStartActivity
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.updateAll
@@ -37,7 +38,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * Today's workout on the home screen; tap to open the app. Once today is all
+ * Today's workout on the home screen; tap to open the app on today's page. Once today is all
  * ticked off, or on a rest day, it shows tomorrow's as well.
  */
 class TodayWidget : GlanceAppWidget() {
@@ -66,7 +67,7 @@ class TodayWidget : GlanceAppWidget() {
         val muted = TextStyle(color = colors.onSurfaceVariant, fontSize = 12.sp)
         Column(
             GlanceModifier.fillMaxSize().background(colors.widgetBackground).cornerRadius(20.dp)
-                .padding(14.dp).clickable(actionStartActivity<MainActivity>())
+                .padding(14.dp).clickable(actionStartActivity(MainActivity.showToday(LocalContext.current)))
         ) {
             if (snap == null) return@Column
             val day = snap.schedule.dayAt(today)

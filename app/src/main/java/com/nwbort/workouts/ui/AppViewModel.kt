@@ -12,10 +12,13 @@ import com.nwbort.workouts.data.VideoEntry
 import com.nwbort.workouts.notify.DailyScheduler
 import com.nwbort.workouts.video.VideoState
 import com.nwbort.workouts.widget.TodayWidget
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -32,6 +35,14 @@ class AppViewModel(private val app: Application) : AndroidViewModel(app) {
     private val _today = MutableStateFlow(LocalDate.now())
     /** Re-read on every resume, so leaving the app open overnight still lands on the new day. */
     val today: StateFlow<LocalDate> = _today.asStateFlow()
+
+    private val _todayRequests = Channel<Unit>(Channel.CONFLATED)
+    /** Fires when the widget or the reminder asks for today's page. */
+    val todayRequests: Flow<Unit> = _todayRequests.receiveAsFlow()
+
+    fun showToday() {
+        _todayRequests.trySend(Unit)
+    }
 
     val plans: List<PlanSummary> get() = repo.planIndex
     val videoEntries: List<VideoEntry> get() = repo.videos
