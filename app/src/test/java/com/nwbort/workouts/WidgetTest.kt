@@ -23,8 +23,7 @@ import java.time.LocalDate
 /** What the home screen widget shows as the day's sessions get ticked off. */
 @RunWith(RobolectricTestRunner::class)
 class WidgetTest {
-    private val plan = Json { ignoreUnknownKeys = true }
-        .decodeFromString<Plan>(File("src/main/assets/plans/uta100-training-plan.json").readText())
+    private val plan = json.decodeFromString<Plan>(File("src/main/assets/plans/uta100-training-plan.json").readText())
     private val settings = Settings(
         planSlug = plan.slug,
         anchor = Settings.DEFAULT_ANCHOR,
@@ -79,3 +78,5 @@ class WidgetTest {
         }
     }
 }
+
+private val json = Json { ignoreUnknownKeys = true }

@@ -19,6 +19,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -59,6 +60,14 @@ fun WorkoutsApp(vm: AppViewModel) {
     var selected by rememberSaveable { mutableStateOf<Long?>(null) }
     var overlays by rememberSaveable { mutableStateOf(listOf<String>()) }
     val context = LocalContext.current
+
+    LaunchedEffect(vm) {
+        vm.todayRequests.collect {
+            tab = Tab.Today
+            selected = null
+            overlays = emptyList()
+        }
+    }
 
     BackHandler(enabled = overlays.isNotEmpty()) { overlays = overlays.dropLast(1) }
     BackHandler(enabled = overlays.isEmpty() && tab != Tab.Today) { tab = Tab.Today }
