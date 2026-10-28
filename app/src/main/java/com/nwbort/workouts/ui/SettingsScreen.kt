@@ -1,6 +1,7 @@
 package com.nwbort.workouts.ui
 
 import android.Manifest
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -12,12 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import com.nwbort.workouts.data.PlanSummary
 import com.nwbort.workouts.data.Repository
 import com.nwbort.workouts.data.Snapshot
+import com.nwbort.workouts.video.VideoLibrary
+import com.nwbort.workouts.video.VideoState
 import java.time.Instant
 import java.time.ZoneOffset
 
@@ -58,6 +63,10 @@ fun SettingsScreen(
     plans: List<PlanSummary>,
     onUpdate: (Repository.SettingsEditor.() -> Unit) -> Unit,
     onReset: () -> Unit,
+    videos: VideoState,
+    videoCount: Int,
+    onChooseVideoFolder: (Uri) -> Unit,
+    onRescanVideos: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val s = snap.settings
@@ -65,6 +74,9 @@ fun SettingsScreen(
     var dialog by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val askNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) onChooseVideoFolder(uri)
+    }
 
     Column(modifier.fillMaxSize()) {
         TopAppBar(title = { Text("Settings") }, windowInsets = WindowInsets(0))
@@ -127,6 +139,33 @@ fun SettingsScreen(
                 headlineContent = { Text("Time") },
                 supportingContent = { Text("%d:%02d".format(s.notifyAt / 60, s.notifyAt % 60)) },
             )
+
+            Section("Videos")
+            val tree = videos.tree
+            ListItem(
+                modifier = Modifier.clickable { pickFolder.launch(tree) },
+                headlineContent = { Text("Videos folder") },
+                supportingContent = {
+                    Text(
+                        when {
+                            tree == null -> "Not chosen yet"
+                            !videos.treeReadable -> VideoLibrary.describe(tree) + "\nCan't be read any more. Tap to choose it again."
+                            else -> VideoLibrary.describe(tree) + "\n${videos.found.size} of $videoCount videos found. " +
+                                "Missing ones can be linked by hand from their menu on the Videos tab."
+                        }
+                    )
+                },
+            )
+            if (tree != null) {
+                ListItem(
+                    modifier = if (videos.scanning) Modifier else Modifier.clickable(onClick = onRescanVideos),
+                    headlineContent = { Text("Rescan folder") },
+                    supportingContent = { Text("Look again for newly downloaded videos") },
+                    trailingContent = if (videos.scanning) {
+                        { CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 3.dp) }
+                    } else null,
+                )
+            }
 
             Section("Progress")
             ListItem(

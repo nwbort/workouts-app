@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import com.nwbort.workouts.notify.DailyScheduler
@@ -70,13 +71,19 @@ class AppTest {
         shot("4-week-notes")
         back()
 
+        // One video linked by hand, so the list has a playable row (and tries
+        // for its thumbnail) next to the ones without a folder.
+        runBlocking { Graph.repo.updateSettings { linkVideo("1014769015", "content://none/strength-workout-1.mp4") } }
         compose.onNodeWithText("Videos").performClick()
-        compose.waitForIdle()
+        waitForText("Linked by hand")
         shot("5-videos")
 
         compose.onNodeWithText("Settings").performClick()
         compose.waitForIdle()
         shot("6-settings")
+        compose.onNodeWithText("Videos folder").performScrollTo()
+        compose.waitForIdle()
+        shot("7-settings-videos")
 
         // The morning notification carries the same title as the calendar event.
         val app = compose.activity.application

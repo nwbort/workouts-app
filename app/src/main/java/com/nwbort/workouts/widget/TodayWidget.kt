@@ -29,13 +29,17 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.nwbort.workouts.Graph
 import com.nwbort.workouts.MainActivity
+import com.nwbort.workouts.data.Day
 import com.nwbort.workouts.data.Kind
 import com.nwbort.workouts.data.Snapshot
 import com.nwbort.workouts.data.shortLabel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-/** Today's workout on the home screen; tap to open the app. */
+/**
+ * Today's workout on the home screen; tap to open the app. Once today is all
+ * ticked off, or on a rest day, it shows tomorrow's as well.
+ */
 class TodayWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         Graph.init(context)
@@ -57,7 +61,7 @@ class TodayWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun Body(snap: Snapshot?, today: LocalDate) {
+    internal fun Body(snap: Snapshot?, today: LocalDate) {
         val colors = GlanceTheme.colors
         val muted = TextStyle(color = colors.onSurfaceVariant, fontSize = 12.sp)
         Column(
@@ -70,28 +74,55 @@ class TodayWidget : GlanceAppWidget() {
             val date = today.format(DateTimeFormatter.ofPattern("EEE d MMM"))
             Text(if (week != null) "$date · Week $week" else date, style = muted, maxLines = 1)
             Spacer(GlanceModifier.height(2.dp))
-            val title = when {
-                day != null -> snap.title(day)
-                today.isBefore(snap.schedule.start) -> "Plan starts ${snap.schedule.start.format(DateTimeFormatter.ofPattern("d MMM"))}"
-                else -> "Plan complete"
-            }
-            Text(
-                title,
-                style = TextStyle(color = colors.onSurface, fontSize = 18.sp, fontWeight = FontWeight.Bold),
-                maxLines = 2,
-            )
-            if (day == null) return@Column
-            Spacer(GlanceModifier.height(6.dp))
-            day.sessions.forEachIndexed { i, s ->
-                if (s.kind == Kind.REST) return@forEachIndexed
-                val done = snap.isDone(day, i)
-                Row(GlanceModifier.padding(vertical = 1.dp)) {
-                    Text(
-                        (if (done) "✓  " else "○  ") + s.shortLabel(),
-                        style = TextStyle(color = if (done) colors.primary else colors.onSurface, fontSize = 13.sp),
-                        maxLines = 1,
-                    )
+            if (day == null) {
+                val title = if (today.isBefore(snap.schedule.start)) {
+                    "Plan starts ${snap.schedule.start.format(DateTimeFormatter.ofPattern("d MMM"))}"
+                } else {
+                    "Plan complete"
                 }
+                Text(title, style = TextStyle(color = colors.onSurface, fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 2)
+                return@Column
+            }
+            // Once today is ticked off (or is a rest day), make room for what's next.
+            val finished = snap.isComplete(day)
+            Text(
+                if (finished) "✓  ${snap.title(day)}" else snap.title(day),
+                style = TextStyle(
+                    color = if (finished) colors.primary else colors.onSurface,
+                    fontSize = if (finished) 16.sp else 18.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
+                maxLines = if (finished) 1 else 2,
+            )
+            if (!finished && !day.isRest) {
+                Sessions(snap, day)
+                return@Column
+            }
+            val tomorrow = snap.schedule.dayAt(today.plusDays(1)) ?: return@Column
+            Spacer(GlanceModifier.height(8.dp))
+            Text("Tomorrow", style = muted, maxLines = 1)
+            Text(
+                snap.title(tomorrow),
+                style = TextStyle(color = colors.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                maxLines = 1,
+            )
+            Sessions(snap, tomorrow)
+        }
+    }
+
+    @Composable
+    private fun Sessions(snap: Snapshot, day: Day) {
+        val colors = GlanceTheme.colors
+        Spacer(GlanceModifier.height(4.dp))
+        day.sessions.forEachIndexed { i, s ->
+            if (s.kind == Kind.REST) return@forEachIndexed
+            val done = snap.isDone(day, i)
+            Row(GlanceModifier.padding(vertical = 1.dp)) {
+                Text(
+                    (if (done) "✓  " else "○  ") + s.shortLabel(),
+                    style = TextStyle(color = if (done) colors.primary else colors.onSurface, fontSize = 13.sp),
+                    maxLines = 1,
+                )
             }
         }
     }

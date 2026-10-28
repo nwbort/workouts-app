@@ -130,8 +130,8 @@ fun WorkoutsApp(vm: AppViewModel) {
                 Tab.Videos -> VideosScreen(
                     entries = vm.videoEntries,
                     state = videos,
+                    thumbnails = vm.thumbnails,
                     onChooseFolder = vm::setVideoFolder,
-                    onRescan = vm::rescanVideos,
                     onLink = vm::linkVideo,
                     onPlay = { entry ->
                         vm.videoUri(entry.id)?.let {
@@ -145,6 +145,10 @@ fun WorkoutsApp(vm: AppViewModel) {
                     plans = vm.plans,
                     onUpdate = vm::updateSettings,
                     onReset = { vm.resetProgress(s.plan.slug); toast(context, "Ticks cleared") },
+                    videos = videos,
+                    videoCount = vm.videoEntries.size,
+                    onChooseVideoFolder = vm::setVideoFolder,
+                    onRescanVideos = vm::rescanVideos,
                     modifier = mod,
                 )
             }

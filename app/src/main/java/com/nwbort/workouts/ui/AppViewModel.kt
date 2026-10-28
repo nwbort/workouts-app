@@ -23,6 +23,7 @@ import java.time.LocalDate
 class AppViewModel(private val app: Application) : AndroidViewModel(app) {
     private val repo = Graph.repo
     private val library = Graph.videos
+    val thumbnails = Graph.thumbnails
 
     val snapshot: StateFlow<Snapshot?> =
         repo.snapshot.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
