@@ -11,6 +11,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
@@ -43,6 +44,16 @@ class TodayWidget : GlanceAppWidget() {
             val snap by repo.snapshot.collectAsState(initial = null)
             GlanceTheme { Body(snap, LocalDate.now()) }
         }
+    }
+
+    /**
+     * What the home screen's widget picker shows: today's real workout,
+     * rendered by the widget itself rather than a static image.
+     */
+    override suspend fun providePreview(context: Context, widgetCategory: Int) {
+        Graph.init(context)
+        val snap = Graph.repo.currentSnapshot()
+        provideContent { GlanceTheme { Body(snap, LocalDate.now()) } }
     }
 
     @Composable
@@ -88,6 +99,11 @@ class TodayWidget : GlanceAppWidget() {
     companion object {
         suspend fun refresh(context: Context) {
             runCatching { TodayWidget().updateAll(context) }
+        }
+
+        /** Re-render the picker preview. The platform rate-limits this, so failures are fine. */
+        suspend fun publishPreview(context: Context) {
+            runCatching { GlanceAppWidgetManager(context).setWidgetPreviews(TodayWidgetReceiver::class) }
         }
     }
 }

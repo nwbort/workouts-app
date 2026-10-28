@@ -1,7 +1,6 @@
 package com.nwbort.workouts.ui
 
 import android.Manifest
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -118,9 +117,7 @@ fun SettingsScreen(
                 supportingContent = { Text("Today's workout, every morning. Skipped on rest days.") },
                 trailingContent = {
                     Switch(checked = s.notify, onCheckedChange = { on ->
-                        if (on && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            askNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
+                        if (on) askNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
                         onUpdate { notify = on }
                     })
                 },

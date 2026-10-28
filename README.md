@@ -70,7 +70,9 @@ disposable.
   session's place in the plan, so changing the race date keeps them.
 
 Kotlin, Jetpack Compose, Material 3 (Material You colours on Android 12+),
-Glance for the widget. Android 10 or newer.
+Glance for the widget, with a live preview in the widget picker. Needs
+Android 16 or newer, so any Pixel still getting updates (Pixel 6 onwards); it
+targets Android 17.
 
 ## Updating the plan data
 

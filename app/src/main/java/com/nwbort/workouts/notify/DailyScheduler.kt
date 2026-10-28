@@ -101,6 +101,7 @@ class DailyReceiver : BroadcastReceiver() {
                 // Every trigger (midnight, boot, clock or time zone change) can
                 // mean a new "today" for the widget.
                 TodayWidget.refresh(context)
+                if (intent.action == DailyScheduler.ACTION_MIDNIGHT) TodayWidget.publishPreview(context)
                 DailyScheduler.schedule(context)
             } finally {
                 pending.finish()

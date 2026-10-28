@@ -14,8 +14,9 @@ android {
 
     defaultConfig {
         applicationId = "com.nwbort.workouts"
-        minSdk = 29
-        targetSdk = 36
+        // Built for a current Pixel: Android 16 and up, targeting Android 17.
+        minSdk = 36
+        targetSdk = 37
         versionCode = buildNumber
         versionName = "1.0.$buildNumber"
     }
@@ -90,4 +91,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    // Newer than the Compose test library pulls in: 3.5 can't idle on Android 17.
+    testImplementation(libs.androidx.test.espresso.core)
+    testImplementation(libs.androidx.test.core)
 }

@@ -1,7 +1,6 @@
 package com.nwbort.workouts
 
 import android.Manifest
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -38,7 +37,6 @@ class MainActivity : ComponentActivity() {
     /** The morning reminder is on by default; ask for the permission it needs, once. */
     @androidx.compose.runtime.Composable
     private fun AskForNotificationsOnce() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         val snap by vm.snapshot.collectAsStateWithLifecycle()
         val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
         val settings = snap?.settings ?: return

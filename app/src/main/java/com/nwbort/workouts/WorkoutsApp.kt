@@ -5,6 +5,7 @@ import android.content.Context
 import com.nwbort.workouts.data.Repository
 import com.nwbort.workouts.notify.DailyScheduler
 import com.nwbort.workouts.video.VideoLibrary
+import com.nwbort.workouts.widget.TodayWidget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +15,10 @@ class WorkoutsApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Graph.init(this)
-        Graph.scope.launch { DailyScheduler.schedule(this@WorkoutsApp) }
+        Graph.scope.launch {
+            DailyScheduler.schedule(this@WorkoutsApp)
+            TodayWidget.publishPreview(this@WorkoutsApp)
+        }
     }
 }
 
