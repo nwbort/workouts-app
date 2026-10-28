@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose draws everything; this only sets the window before it does. -->
+    <style name="Theme.Workouts" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.Workouts.Player" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

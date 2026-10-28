@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Workouts</string>
+    <string name="widget_name">Today\'s workout</string>
+    <string name="widget_description">What today\'s training plan holds, with ticks for what\'s done</string>
+</resources>
