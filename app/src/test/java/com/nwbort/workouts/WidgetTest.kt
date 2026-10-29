@@ -72,7 +72,7 @@ class WidgetTest {
         val strength = sessionKey(plan.slug, day, 1)
         render(wed, setOf(strength)) {
             onAllNodes(hasTextEqualTo("✓")).assertCountEquals(1)
-            onNode(hasRunCallbackClickAction(ToggleSession::class.java, actionParametersOf(KEY to strength))).assertExists()
+            onNode(hasRunCallbackClickAction<ToggleSession>(actionParametersOf(KEY to strength))).assertExists()
         }
     }
 
