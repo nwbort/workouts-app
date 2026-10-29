@@ -10,36 +10,49 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.LocalContext
+import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.updateAll
 import androidx.glance.background
+import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import com.nwbort.workouts.Graph
 import com.nwbort.workouts.MainActivity
 import com.nwbort.workouts.data.Day
 import com.nwbort.workouts.data.Kind
+import com.nwbort.workouts.data.Session
 import com.nwbort.workouts.data.Snapshot
+import com.nwbort.workouts.data.sessionKey
 import com.nwbort.workouts.data.shortLabel
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * Today's workout on the home screen; tap to open the app on today's page. Once today is all
- * ticked off, or on a rest day, it shows tomorrow's as well.
+ * Today's workout on the home screen, one tile per session to tick off with a tap; tap anywhere
+ * else to open the app on today's page. Once today is all ticked off, or on a rest day, it shows
+ * tomorrow's as well.
  */
 class TodayWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -96,7 +109,8 @@ class TodayWidget : GlanceAppWidget() {
                 maxLines = if (finished) 1 else 2,
             )
             if (!finished && !day.isRest) {
-                Sessions(snap, day)
+                Spacer(GlanceModifier.height(8.dp))
+                Tiles(snap, day, GlanceModifier.fillMaxWidth().defaultWeight())
                 return@Column
             }
             val tomorrow = snap.schedule.dayAt(today.plusDays(1)) ?: return@Column
@@ -128,6 +142,63 @@ class TodayWidget : GlanceAppWidget() {
         }
     }
 
+    /**
+     * Today's sessions as big squares that tick off with a tap, in up to two rows so
+     * five- and six-session rehab days stay tappable.
+     */
+    @Composable
+    private fun Tiles(snap: Snapshot, day: Day, modifier: GlanceModifier) {
+        val sessions = day.sessions.indices.filter { day.sessions[it].kind != Kind.REST }
+        val rows = (sessions.size + 2) / 3
+        val perRow = (sessions.size + rows - 1) / rows
+        Column(modifier) {
+            sessions.chunked(perRow).forEachIndexed { r, chunk ->
+                if (r > 0) Spacer(GlanceModifier.height(6.dp))
+                Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
+                    chunk.forEachIndexed { c, i ->
+                        if (c > 0) Spacer(GlanceModifier.width(6.dp))
+                        Tile(snap, day, i, GlanceModifier.defaultWeight().fillMaxHeight())
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun Tile(snap: Snapshot, day: Day, index: Int, modifier: GlanceModifier) {
+        val colors = GlanceTheme.colors
+        val s = day.sessions[index]
+        val done = snap.isDone(day, index)
+        val fg = when {
+            done -> colors.onPrimary
+            s.optional -> colors.onSurfaceVariant
+            else -> colors.onSecondaryContainer
+        }
+        Column(
+            modifier
+                .background(if (done) colors.primary else if (s.optional) colors.surfaceVariant else colors.secondaryContainer)
+                .cornerRadius(14.dp)
+                .padding(horizontal = 6.dp, vertical = 4.dp)
+                .clickable(actionRunCallback<ToggleSession>(actionParametersOf(KEY to sessionKey(snap.plan.slug, day, index)))),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                if (done) "✓" else "○",
+                style = TextStyle(color = fg, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center),
+                maxLines = 1,
+            )
+            Text(
+                s.tileLabel(),
+                style = TextStyle(color = fg, fontSize = 12.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center),
+                maxLines = 2,
+            )
+            if (s.optional) {
+                Text("optional", style = TextStyle(color = fg, fontSize = 10.sp, textAlign = TextAlign.Center), maxLines = 1)
+            }
+        }
+    }
+
     companion object {
         suspend fun refresh(context: Context) {
             runCatching { TodayWidget().updateAll(context) }
@@ -137,6 +208,32 @@ class TodayWidget : GlanceAppWidget() {
         suspend fun publishPreview(context: Context) {
             runCatching { GlanceAppWidgetManager(context).setWidgetPreviews(TodayWidgetReceiver::class) }
         }
+    }
+}
+
+internal val KEY = ActionParameters.Key<String>("session")
+
+/** Ticks a session off from its tile, or unticks it. */
+class ToggleSession : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val key = parameters[KEY] ?: return
+        Graph.init(context)
+        Graph.repo.setDone(key, key !in Graph.repo.done.first())
+        TodayWidget().update(context, glanceId)
+    }
+}
+
+/** A name short enough for a tile; "optional" goes on its own line. */
+internal fun Session.tileLabel(): String {
+    val calf = title.startsWith("Calf")
+    return when (kind) {
+        Kind.RUN, Kind.WALK -> shortLabel().removePrefix("Optional ").replaceFirstChar { it.uppercase() }
+        Kind.STRENGTH -> if (calf) "Calf strength" else title.replace("Strength Workout", "Strength")
+        Kind.STRETCHING -> if (calf) "Calf stretch" else "Stretch"
+        Kind.ROLLING -> "Foam roll"
+        Kind.CROSS_TRAINING -> "Cross train"
+        Kind.RACE -> "Race"
+        else -> title
     }
 }
 

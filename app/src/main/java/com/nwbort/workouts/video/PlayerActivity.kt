@@ -2,6 +2,7 @@ package com.nwbort.workouts.video
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -36,8 +37,9 @@ import java.util.concurrent.TimeUnit
  *
  * A separate activity so rotating the phone doesn't restart playback (it
  * handles its own configuration changes) and the system bars can be hidden.
- * Remembers where you stopped for a few hours, and ticks the session off
- * when the video plays to the end.
+ * Opens in landscape, with the controls' full-screen button to swap to
+ * portrait and back. Remembers where you stopped for a few hours, and ticks
+ * the session off when the video plays to the end.
  */
 @OptIn(UnstableApi::class)
 class PlayerActivity : ComponentActivity() {
@@ -45,6 +47,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var playerView: PlayerView
     private var resumeAt: Long? = null
     private var restored = false
+    private var landscape = true
 
     private val uri by lazy { Uri.parse(intent.getStringExtra(EXTRA_URI)) }
     private val videoId by lazy { intent.getStringExtra(EXTRA_VIDEO_ID).orEmpty() }
@@ -61,7 +64,9 @@ class PlayerActivity : ComponentActivity() {
         savedInstanceState?.let {
             resumeAt = it.getLong(STATE_POSITION, -1).takeIf { p -> p >= 0 }
             restored = true
+            landscape = it.getBoolean(STATE_LANDSCAPE, true)
         }
+        lockOrientation()
 
         playerView = PlayerView(this).apply {
             setBackgroundColor(Color.BLACK)
@@ -69,6 +74,11 @@ class PlayerActivity : ComponentActivity() {
             setShowNextButton(false)
             setShowPreviousButton(false)
             setShowSubtitleButton(false)
+            setFullscreenButtonState(landscape)
+            setFullscreenButtonClickListener { full ->
+                landscape = full
+                lockOrientation()
+            }
         }
         val title = TextView(this).apply {
             text = intent.getStringExtra(EXTRA_TITLE)
@@ -153,6 +163,12 @@ class PlayerActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putLong(STATE_POSITION, player?.currentPosition ?: resumeAt ?: 0L)
+        outState.putBoolean(STATE_LANDSCAPE, landscape)
+    }
+
+    private fun lockOrientation() {
+        requestedOrientation = if (landscape) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        else ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
     }
 
     private fun finished() {
@@ -171,6 +187,7 @@ class PlayerActivity : ComponentActivity() {
         private const val EXTRA_VIDEO_ID = "video"
         private const val EXTRA_DONE_KEY = "done_key"
         private const val STATE_POSITION = "position"
+        private const val STATE_LANDSCAPE = "landscape"
 
         fun intent(context: Context, uri: Uri, title: String, videoId: String, doneKey: String? = null) =
             Intent(context, PlayerActivity::class.java)
