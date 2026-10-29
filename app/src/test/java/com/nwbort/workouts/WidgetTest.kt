@@ -4,6 +4,8 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.testing.unit.GlanceAppWidgetUnitTest
 import androidx.glance.appwidget.testing.unit.runGlanceAppWidgetUnitTest
+import androidx.glance.action.actionParametersOf
+import androidx.glance.appwidget.testing.unit.hasRunCallbackClickAction
 import androidx.glance.testing.unit.hasText
 import androidx.glance.testing.unit.hasTextEqualTo
 import androidx.test.core.app.ApplicationProvider
@@ -12,7 +14,9 @@ import com.nwbort.workouts.data.Schedule
 import com.nwbort.workouts.data.Settings
 import com.nwbort.workouts.data.Snapshot
 import com.nwbort.workouts.data.sessionKey
+import com.nwbort.workouts.widget.KEY
 import com.nwbort.workouts.widget.TodayWidget
+import com.nwbort.workouts.widget.ToggleSession
 import kotlinx.serialization.json.Json
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,8 +60,33 @@ class WidgetTest {
     @Test
     fun shows_only_today_while_sessions_are_left() = render(wed, emptySet()) {
         onNode(hasTextEqualTo("Run 10km + Strength")).assertExists()
-        onNode(hasTextEqualTo("○  Strength Workout 9")).assertExists()
+        onNode(hasTextEqualTo("Strength 9")).assertExists()
+        onNode(hasTextEqualTo("Foam roll")).assertExists()
+        onAllNodes(hasTextEqualTo("○")).assertCountEquals(3)
         onAllNodes(hasTextEqualTo("Tomorrow")).assertCountEquals(0)
+    }
+
+    @Test
+    fun a_tile_ticks_its_session_off() {
+        val day = schedule.dayAt(wed)!!
+        val strength = sessionKey(plan.slug, day, 1)
+        render(wed, setOf(strength)) {
+            onAllNodes(hasTextEqualTo("✓")).assertCountEquals(1)
+            onNode(hasRunCallbackClickAction(ToggleSession::class.java, actionParametersOf(KEY to strength))).assertExists()
+        }
+    }
+
+    @Test
+    fun optional_sessions_are_marked_and_not_needed_to_finish() {
+        // Week 11's Friday: "Strength + opt. cross training".
+        val fri = wed.plusDays(2)
+        render(fri, emptySet()) {
+            onNode(hasTextEqualTo("Cross train")).assertExists()
+            onAllNodes(hasTextEqualTo("optional")).assertCountEquals(1)
+        }
+        render(fri, allDone(fri)) {
+            onNode(hasTextEqualTo("Tomorrow")).assertExists()
+        }
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.nwbort.workouts.ui
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -183,8 +184,10 @@ private fun DayPage(
                         drawStopIndicator = {},
                     )
                     Spacer(Modifier.height(4.dp))
+                    val extras = day.sessions.count { it.optional }
                     Text(
-                        if (done == required) "All done — nice work" else "$done of $required done",
+                        (if (done == required) "All done — nice work" else "$done of $required done") +
+                            (if (extras > 0) " · optional extras not counted" else ""),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -245,28 +248,50 @@ private fun SessionCard(
 ) {
     val rest = session.kind == Kind.REST
     val race = session.kind == Kind.RACE
+    // Optional sessions sit back a little: flat and outlined, as extras rather than the day's work.
+    val optional = session.optional
     ElevatedCard(
-        colors = if (race) CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        else CardDefaults.elevatedCardColors(),
+        colors = when {
+            race -> CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            optional -> CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            else -> CardDefaults.elevatedCardColors()
+        },
+        elevation = if (optional) CardDefaults.elevatedCardElevation(0.dp) else CardDefaults.elevatedCardElevation(),
+        modifier = if (optional) Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, CardDefaults.elevatedShape) else Modifier,
     ) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = if (done) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
+                    color = when {
+                        done -> MaterialTheme.colorScheme.primary
+                        optional -> MaterialTheme.colorScheme.surfaceContainerHighest
+                        else -> MaterialTheme.colorScheme.secondaryContainer
+                    },
+                    contentColor = when {
+                        done -> MaterialTheme.colorScheme.onPrimary
+                        optional -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else -> MaterialTheme.colorScheme.onSecondaryContainer
+                    },
                 ) {
                     Icon(kindIcon(session.kind), null, Modifier.padding(8.dp).size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(session.shortLabel(), style = MaterialTheme.typography.titleMedium)
-                    if (session.optional) {
-                        Text(
-                            "Optional",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.tertiary,
-                        )
+                    if (optional) {
+                        Spacer(Modifier.height(2.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        ) {
+                            Text(
+                                "Optional · doesn't count",
+                                style = MaterialTheme.typography.labelMedium,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
+                        }
                     }
                 }
                 if (!rest) {
