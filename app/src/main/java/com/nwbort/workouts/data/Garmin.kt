@@ -52,6 +52,9 @@ object Garmin {
     const val SEARCH_PATH = "/activitylist-service/activities/search/activities"
     /** Where the user makes a key: Garmin Connect, Settings, Personal API token. */
     const val KEY_PAGE = "https://connect.garmin.com/app/settings/personalApiToken"
+    /** An activity's page in Garmin Connect; the Garmin Connect app opens these links when installed. */
+    fun activityUrl(id: Long) = "https://connect.garmin.com/modern/activity/$id"
+
     /** The expiry periods Garmin offers when making a key. */
     val KEY_LIFETIMES = listOf(30, 90, 180, 365)
 

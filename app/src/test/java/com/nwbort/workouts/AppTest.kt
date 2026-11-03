@@ -116,7 +116,7 @@ class AppTest {
             val snap = Graph.repo.currentSnapshot()!!
             Graph.repo.saveGarminSync(LocalDate.now(), LocalDate.now(), listOf(run), Garmin.autoTicks(snap, listOf(run), emptySet()))
         }
-        waitForText("From Garmin")
+        waitForText("Garmin · 10.2 km · 58:09 · 5:40 /km")
         waitForText("2 of 3 done")
         waitForText("Garmin key expires in 5 days")
         shot("8-today-garmin")

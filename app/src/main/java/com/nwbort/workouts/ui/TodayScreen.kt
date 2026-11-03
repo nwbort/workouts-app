@@ -1,6 +1,7 @@
 package com.nwbort.workouts.ui
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -21,6 +22,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.PlayArrow
@@ -44,11 +46,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nwbort.workouts.data.Day
+import com.nwbort.workouts.data.Garmin
 import com.nwbort.workouts.data.GarminActivity
 import com.nwbort.workouts.data.Kind
 import com.nwbort.workouts.data.Session
@@ -199,9 +204,13 @@ private fun DayPage(
                 }
             }
         }
+        // Activities that match a session show inside its card; any others
+        // (a ride, a gym session) get a card of their own.
         val activities = snap.activitiesOn(snap.schedule.dateOf(day))
-        if (activities.isNotEmpty()) {
-            item { GarminCard(activities) }
+        val matched = Garmin.assign(snap, activities)
+        val unmatched = activities.filter { it !in matched.values }
+        if (unmatched.isNotEmpty()) {
+            item { GarminCard(unmatched) }
         }
         if (missingVideos && videos.tree == null) {
             item { VideoSetupBanner(onSetUpVideos) }
@@ -214,6 +223,7 @@ private fun DayPage(
                 folderSet = videos.tree != null,
                 onToggle = { onToggle(sessionKey(snap.plan.slug, day, i), it) },
                 onPlay = { onPlay(day, i, session) },
+                garmin = matched[sessionKey(snap.plan.slug, day, i)],
             )
         }
         if (snap.plan.weekInfo.any { it.week == day.week && it.notes.isNotEmpty() }) {
@@ -259,24 +269,59 @@ private fun GarminCard(activities: List<GarminActivity>) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Text("From Garmin", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text("Also on Garmin", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             activities.forEach { a ->
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(kindIcon(if (a.isRun) Kind.RUN else if (a.isWalk) Kind.WALK else Kind.CROSS_TRAINING), null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        listOfNotNull(
-                            a.name.ifBlank { null },
-                            a.km?.let { "%.1f km".format(it) },
-                            a.durationS?.let(::duration),
-                        ).joinToString(" · "),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+                Spacer(Modifier.height(4.dp))
+                GarminRow(a, showName = true)
             }
         }
     }
+}
+
+/**
+ * One Garmin activity as a line of stats. Tapping it opens the activity in
+ * Garmin Connect: the app if it's installed and handles the link, otherwise
+ * the browser.
+ */
+@Composable
+private fun GarminRow(a: GarminActivity, showName: Boolean, modifier: Modifier = Modifier) {
+    val uri = LocalUriHandler.current
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClickLabel = "Open in Garmin Connect") { runCatching { uri.openUri(Garmin.activityUrl(a.id)) } }
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(kindIcon(if (a.isRun) Kind.RUN else if (a.isWalk) Kind.WALK else Kind.CROSS_TRAINING), null, Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            listOfNotNull(
+                if (showName) a.name.ifBlank { null } else "Garmin",
+                a.km?.let { "%.1f km".format(it) },
+                a.durationS?.let(::duration),
+                a.pace()?.let { "$it /km" },
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            Icons.AutoMirrored.Filled.OpenInNew,
+            "Open in Garmin Connect",
+            Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+/** Minutes per km for runs and walks, e.g. "5:26". */
+private fun GarminActivity.pace(): String? {
+    if (!isRun && !isWalk) return null
+    val k = km ?: return null
+    val secs = durationS ?: return null
+    val per = (secs / k).toLong()
+    return "%d:%02d".format(per / 60, per % 60)
 }
 
 private fun duration(seconds: Double): String {
@@ -310,6 +355,7 @@ private fun SessionCard(
     folderSet: Boolean,
     onToggle: (Boolean) -> Unit,
     onPlay: () -> Unit,
+    garmin: GarminActivity? = null,
 ) {
     val rest = session.kind == Kind.REST
     val race = session.kind == Kind.RACE
@@ -380,6 +426,17 @@ private fun SessionCard(
                     modifier = Modifier.padding(end = 8.dp),
                 ) {
                     session.tags.forEach { Tag(it) }
+                }
+            }
+            if (garmin != null) {
+                Spacer(Modifier.height(10.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(end = 8.dp),
+                ) {
+                    GarminRow(garmin, showName = false, modifier = Modifier.padding(horizontal = 10.dp))
                 }
             }
             if (session.video != null) {
