@@ -254,7 +254,10 @@ private fun GarminKeyBanner(snap: Snapshot, today: LocalDate, onFix: () -> Unit)
 /** What Garmin recorded on a day, beside what the plan asked for. */
 @Composable
 private fun GarminCard(activities: List<GarminActivity>) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Text("From Garmin", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             activities.forEach { a ->
