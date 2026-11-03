@@ -110,8 +110,9 @@ fun WorkoutsApp(vm: AppViewModel) {
         // tablet, a desktop window) the tabs move to a rail down the left, and
         // from expanded width the plan sits beside the day, so it isn't a tab
         // of its own.
-        val rail = maxWidth >= MEDIUM_WIDTH.dp
-        val twoPane = maxWidth >= EXPANDED_WIDTH.dp
+        val width = maxWidth
+        val rail = width >= MEDIUM_WIDTH.dp
+        val twoPane = width >= EXPANDED_WIDTH.dp
         val tabs = if (twoPane) Tab.entries - Tab.Plan else Tab.entries
         val current = if (twoPane && tab == Tab.Plan) Tab.Today else tab
         val pick: (Tab) -> Unit = { t ->
@@ -151,7 +152,7 @@ fun WorkoutsApp(vm: AppViewModel) {
                                 onGlossary = openGlossary,
                                 highlight = selectedDate,
                                 asPane = true,
-                                modifier = Modifier.width(if (maxWidth >= 1200.dp) 400.dp else 340.dp).fillMaxHeight(),
+                                modifier = Modifier.width(if (width >= 1200.dp) 400.dp else 340.dp).fillMaxHeight(),
                             )
                             VerticalDivider()
                             day(Modifier.weight(1f))
