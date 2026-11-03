@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Back up everything except the Garmin key and token. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="datastore/garmin.preferences_pb" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="datastore/garmin.preferences_pb" />
+    </device-transfer>
+</data-extraction-rules>

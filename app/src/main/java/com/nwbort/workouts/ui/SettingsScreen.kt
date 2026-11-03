@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,15 +44,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.nwbort.workouts.data.Garmin
 import com.nwbort.workouts.data.PlanSummary
 import com.nwbort.workouts.data.Repository
 import com.nwbort.workouts.data.Snapshot
 import com.nwbort.workouts.video.VideoLibrary
 import com.nwbort.workouts.video.VideoState
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 
 private val DAY_NAMES = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -67,6 +73,10 @@ fun SettingsScreen(
     videoCount: Int,
     onChooseVideoFolder: (Uri) -> Unit,
     onRescanVideos: () -> Unit,
+    garminSyncing: Boolean,
+    onConnectGarmin: (String, LocalDate) -> Unit,
+    onSyncGarmin: () -> Unit,
+    onDisconnectGarmin: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val s = snap.settings
@@ -167,6 +177,58 @@ fun SettingsScreen(
                 )
             }
 
+            Section("Garmin Connect")
+            val g = snap.garmin
+            if (!g.connected) {
+                ListItem(
+                    modifier = Modifier.clickable { dialog = "garmin" },
+                    headlineContent = { Text("Connect Garmin") },
+                    supportingContent = {
+                        Text("Tick runs off automatically once your watch has synced them, and see the distance you actually ran.")
+                    },
+                )
+            } else {
+                val today = LocalDate.now()
+                ListItem(
+                    modifier = if (garminSyncing) Modifier else Modifier.clickable(onClick = onSyncGarmin),
+                    headlineContent = { Text("Sync now") },
+                    supportingContent = {
+                        val runs = g.activities.count { it.isRun }
+                        Text(
+                            listOfNotNull(
+                                g.lastSync?.let { "Last synced ${syncTime(it)} · ${plural(runs.toLong(), "run")} found" }
+                                    ?: "Not synced yet",
+                                g.lastError,
+                            ).joinToString("\n")
+                        )
+                    },
+                    trailingContent = if (garminSyncing) {
+                        { CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 3.dp) }
+                    } else null,
+                )
+                ListItem(
+                    modifier = Modifier.clickable { dialog = "garmin" },
+                    headlineContent = { Text("API key") },
+                    supportingContent = {
+                        val left = g.daysLeft(today)
+                        Text(
+                            when {
+                                g.keyRejected -> "Turned down by Garmin. Tap to paste a new one."
+                                left == null -> "Tap to replace it"
+                                left < 0 -> "Expired ${g.keyExpires?.fullDate()}. Tap to paste a new one."
+                                else -> "Expires ${g.keyExpires?.fullDate()} (in ${plural(left, "day")}). Tap to replace it."
+                            },
+                            color = if (g.needsNewKey(today)) MaterialTheme.colorScheme.error else androidx.compose.ui.graphics.Color.Unspecified,
+                        )
+                    },
+                )
+                ListItem(
+                    modifier = Modifier.clickable { dialog = "garmin-off" },
+                    headlineContent = { Text("Disconnect") },
+                    supportingContent = { Text("Forget the key and Garmin's activities. Ticks stay.") },
+                )
+            }
+
             Section("Progress")
             ListItem(
                 modifier = Modifier.clickable { dialog = "reset" },
@@ -228,6 +290,17 @@ fun SettingsScreen(
                 text = { TimePicker(state) },
             )
         }
+        "garmin" -> GarminKeyDialog(
+            onDismiss = { dialog = null },
+            onConnect = { key, expires -> dialog = null; onConnectGarmin(key, expires) },
+        )
+        "garmin-off" -> AlertDialog(
+            onDismissRequest = { dialog = null },
+            title = { Text("Disconnect Garmin?") },
+            text = { Text("The app forgets the key and the activities it fetched. Sessions already ticked stay ticked.") },
+            confirmButton = { TextButton(onClick = { onDisconnectGarmin(); dialog = null }) { Text("Disconnect") } },
+            dismissButton = { TextButton(onClick = { dialog = null }) { Text("Cancel") } },
+        )
         "reset" -> AlertDialog(
             onDismissRequest = { dialog = null },
             title = { Text("Clear all ticks?") },
@@ -236,6 +309,59 @@ fun SettingsScreen(
             dismissButton = { TextButton(onClick = { dialog = null }) { Text("Cancel") } },
         )
     }
+}
+
+@Composable
+private fun GarminKeyDialog(onDismiss: () -> Unit, onConnect: (String, LocalDate) -> Unit) {
+    val uri = LocalUriHandler.current
+    var key by rememberSaveable { mutableStateOf("") }
+    var days by rememberSaveable { mutableStateOf(365) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Connect Garmin") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    "In Garmin Connect, open Settings → Personal API token, choose Create Key, " +
+                        "and copy the key: Garmin shows it only once. The app uses it to read your " +
+                        "activities; it can't change anything in your account.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                TextButton(onClick = { uri.openUri(Garmin.KEY_PAGE) }) { Text("Open Garmin Connect") }
+                OutlinedTextField(
+                    value = key,
+                    onValueChange = { key = it.trim() },
+                    label = { Text("Personal API key") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(12.dp))
+                Text("Expiry you chose for it", style = MaterialTheme.typography.labelLarge)
+                Garmin.KEY_LIFETIMES.forEach { d ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { days = d },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = days == d, onClick = { days = d })
+                        Text(if (d == 365) "1 year" else "$d days")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = key.isNotBlank(),
+                onClick = { onConnect(key, LocalDate.now().plusDays(days.toLong())) },
+            ) { Text("Connect") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+private fun syncTime(ms: Long): String {
+    val t = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault())
+    val time = "%d:%02d".format(t.hour, t.minute)
+    return if (t.toLocalDate() == LocalDate.now()) "today at $time" else "${t.toLocalDate().dayMonth()} at $time"
 }
 
 @Composable

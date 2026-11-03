@@ -15,6 +15,15 @@ where there's a video, a play button. Swipe for other days.
 | **Videos** | All 23 session videos, playable directly, and where the app found each one. |
 | **Settings** | Plan, race date, name, race distance, and the morning reminder. |
 
+**Garmin Connect (optional).** Under Settings, paste a Garmin *Personal API
+key* (Garmin Connect → Settings → Personal API token → Create Key) and the app
+pulls your activities every few hours and whenever it opens. A run on a day
+with a run session ticks that session off; the day's page shows what Garmin
+recorded and the Plan tab shows the kilometres actually run each day and week.
+It's read-only: Garmin's personal keys can't send workouts to the watch. A
+session you untick by hand stays unticked. Keys last at most a year; the app
+warns a week before yours runs out. The key isn't included in phone backups.
+
 Also: a **morning notification** with the day's workout (skipped on rest days),
 and a **home screen widget** showing today with its ticks.
 

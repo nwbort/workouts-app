@@ -61,6 +61,10 @@ fun WorkoutsApp(vm: AppViewModel) {
     var overlays by rememberSaveable { mutableStateOf(listOf<String>()) }
     val context = LocalContext.current
 
+    val garminSyncing by vm.garminSyncing.collectAsStateWithLifecycle()
+    LaunchedEffect(vm) {
+        vm.messages.collect { toast(context, it) }
+    }
     LaunchedEffect(vm) {
         vm.todayRequests.collect {
             tab = Tab.Today
@@ -123,6 +127,7 @@ fun WorkoutsApp(vm: AppViewModel) {
                     onPlay = play,
                     onNotes = openNotes,
                     onSetUpVideos = { tab = Tab.Videos },
+                    onGarminKey = { tab = Tab.Settings },
                     modifier = mod,
                 )
                 Tab.Plan -> PlanScreen(
@@ -158,6 +163,10 @@ fun WorkoutsApp(vm: AppViewModel) {
                     videoCount = vm.videoEntries.size,
                     onChooseVideoFolder = vm::setVideoFolder,
                     onRescanVideos = vm::rescanVideos,
+                    garminSyncing = garminSyncing,
+                    onConnectGarmin = { key, expires -> vm.connectGarmin(key, expires) },
+                    onSyncGarmin = { vm.syncGarmin() },
+                    onDisconnectGarmin = { vm.disconnectGarmin() },
                     modifier = mod,
                 )
             }

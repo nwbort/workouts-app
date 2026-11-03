@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Back up everything except the Garmin key and token. -->
+<full-backup-content>
+    <exclude domain="file" path="datastore/garmin.preferences_pb" />
+</full-backup-content>

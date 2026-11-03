@@ -9,6 +9,7 @@ import com.nwbort.workouts.data.PlanSummary
 import com.nwbort.workouts.data.Repository
 import com.nwbort.workouts.data.Snapshot
 import com.nwbort.workouts.data.VideoEntry
+import com.nwbort.workouts.garmin.GarminSync
 import com.nwbort.workouts.notify.DailyScheduler
 import com.nwbort.workouts.video.VideoState
 import com.nwbort.workouts.widget.TodayWidget
@@ -26,6 +27,7 @@ import java.time.LocalDate
 class AppViewModel(private val app: Application) : AndroidViewModel(app) {
     private val repo = Graph.repo
     private val library = Graph.videos
+    private val garmin = Graph.garmin
     val thumbnails = Graph.thumbnails
 
     val snapshot: StateFlow<Snapshot?> =
@@ -50,6 +52,43 @@ class AppViewModel(private val app: Application) : AndroidViewModel(app) {
     fun onResume() {
         _today.value = LocalDate.now()
         library.refresh()
+        viewModelScope.launch {
+            _garminSyncing.value = true
+            try { garmin.syncIfStale() } finally { _garminSyncing.value = false }
+        }
+    }
+
+    private val _garminSyncing = MutableStateFlow(false)
+    val garminSyncing: StateFlow<Boolean> = _garminSyncing.asStateFlow()
+
+    private val _messages = Channel<String>(Channel.BUFFERED)
+    /** Short notes for a toast, like how a Garmin sync went. */
+    val messages: Flow<String> = _messages.receiveAsFlow()
+
+    fun syncGarmin() = viewModelScope.launch {
+        if (_garminSyncing.value) return@launch
+        _garminSyncing.value = true
+        val r = try { garmin.sync() } finally { _garminSyncing.value = false }
+        _messages.trySend(
+            when (r) {
+                is GarminSync.Result.Synced ->
+                    "Garmin: ${r.activities} activit${if (r.activities == 1) "y" else "ies"}" +
+                        if (r.ticked > 0) ", ${r.ticked} session${if (r.ticked == 1) "" else "s"} ticked off" else ""
+                is GarminSync.Result.Failed -> r.message
+                GarminSync.Result.NotConnected -> "Garmin isn't connected"
+            }
+        )
+    }
+
+    fun connectGarmin(key: String, expires: LocalDate) = viewModelScope.launch {
+        repo.setGarminKey(key.trim(), expires)
+        GarminSync.schedule(app, connected = true)
+        syncGarmin().join()
+    }
+
+    fun disconnectGarmin() = viewModelScope.launch {
+        repo.setGarminKey(null, null)
+        GarminSync.schedule(app, connected = false)
     }
 
     fun setDone(key: String, done: Boolean) = viewModelScope.launch {

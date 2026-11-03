@@ -20,6 +20,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
+import com.nwbort.workouts.data.Garmin
+import com.nwbort.workouts.data.GarminActivity
 import com.nwbort.workouts.notify.DailyScheduler
 import com.nwbort.workouts.video.PlayerActivity
 import kotlinx.coroutines.runBlocking
@@ -104,6 +106,27 @@ class AppTest {
         runBlocking { DailyScheduler.postToday(app) }
         val posted = shadowOf(app.getSystemService(NotificationManager::class.java)).allNotifications.single()
         assertEquals("W11 · Run 10km + Strength", posted.extras.getString(Notification.EXTRA_TITLE))
+
+        // Garmin: a synced run shows on today's page, ticks the run off, and
+        // the Plan tab shows the distance. Last-synced is now, so the app
+        // doesn't try to reach Garmin itself.
+        runBlocking {
+            Graph.repo.setGarminKey("test-key", LocalDate.now().plusDays(5))
+            val run = GarminActivity(1, LocalDate.now().toString(), "running", "Morning Run", 10234.0, 3489.0, "${LocalDate.now()} 06:30:00")
+            val snap = Graph.repo.currentSnapshot()!!
+            Graph.repo.saveGarminSync(LocalDate.now(), LocalDate.now(), listOf(run), Garmin.autoTicks(snap, listOf(run), emptySet()))
+        }
+        waitForText("Garmin · 10.2 km · 58:09 · 5:40 /km")
+        waitForText("2 of 3 done")
+        waitForText("Garmin key expires in 5 days")
+        shot("8-today-garmin")
+        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithText("Sync now").performScrollTo()
+        compose.waitForIdle()
+        shot("9-settings-garmin")
+        compose.onNodeWithText("Disconnect").performClick()
+        compose.waitForIdle()
+        shot("10-garmin-disconnect")
 
         // The player starts and stops cleanly. (Nothing to decode on the JVM.)
         val intent = PlayerActivity.intent(app, Uri.parse("content://none/strength-workout-9.mp4"), "Strength Workout 9", "1015976604")
