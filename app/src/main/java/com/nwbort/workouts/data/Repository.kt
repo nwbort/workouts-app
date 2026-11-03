@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -24,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap
 private val Context.settingsStore by preferencesDataStore("settings")
 private val Context.progressStore by preferencesDataStore("progress")
 private val Context.playbackStore by preferencesDataStore("playback")
+// Kept apart from settings so it can be left out of backups: it holds the Garmin key.
+private val Context.garminStore by preferencesDataStore("garmin")
 
 data class Settings(
     val planSlug: String,
@@ -52,9 +55,47 @@ data class Settings(
     }
 }
 
+/** The Garmin Connect link: the key, what the last sync found, and how it went. */
+data class GarminState(
+    val apiKey: String? = null,
+    /** When the key runs out, as chosen when it was made in Garmin Connect. */
+    val keyExpires: LocalDate? = null,
+    val lastSync: Long? = null,
+    val lastError: String? = null,
+    /** The last error was Garmin turning the key down. */
+    val keyRejected: Boolean = false,
+    val activities: List<GarminActivity> = emptyList(),
+) {
+    val connected: Boolean get() = apiKey != null
+
+    /** Days until the key expires; negative once it has. */
+    fun daysLeft(today: LocalDate): Long? = keyExpires?.let { java.time.temporal.ChronoUnit.DAYS.between(today, it) }
+
+    /** The key needs replacing soon (or already does). */
+    fun needsNewKey(today: LocalDate): Boolean = connected && (keyRejected || (daysLeft(today) ?: Long.MAX_VALUE) <= 7)
+}
+
 /** Everything a screen needs to show the plan on real dates. */
-data class Snapshot(val settings: Settings, val schedule: Schedule, val done: Set<String>) {
+data class Snapshot(
+    val settings: Settings,
+    val schedule: Schedule,
+    val done: Set<String>,
+    val garmin: GarminState = GarminState(),
+) {
     val plan: Plan get() = schedule.plan
+
+    private val activitiesByDate: Map<LocalDate, List<GarminActivity>> by lazy {
+        garmin.activities.groupBy { it.localDate }.mapValues { (_, v) -> v.sortedBy { it.start } }
+    }
+
+    /** What Garmin recorded on [date], earliest first. */
+    fun activitiesOn(date: LocalDate): List<GarminActivity> = activitiesByDate[date].orEmpty()
+
+    /** Kilometres run between [from] and [to] inclusive, by Garmin; null when nothing was recorded. */
+    fun kmRun(from: LocalDate, to: LocalDate): Double? = garmin.activities
+        .filter { it.isRun && !it.localDate.isBefore(from) && !it.localDate.isAfter(to) }
+        .mapNotNull { it.km }
+        .takeIf { it.isNotEmpty() }?.sum()
     val name: String get() = settings.name.ifBlank { plan.title }
 
     fun title(day: Day): String {
@@ -97,9 +138,67 @@ class Repository(private val context: Context) {
 
     val done: Flow<Set<String>> = context.progressStore.data.map { it[DONE] ?: emptySet() }.distinctUntilChanged()
 
+    val garmin: Flow<GarminState> = context.garminStore.data.map { it.toGarmin() }.distinctUntilChanged()
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val snapshot: Flow<Snapshot?> = combine(settings, done) { s, d -> s to d }.mapLatest { (s, d) ->
-        (plan(s.planSlug) ?: plan(Settings.DEFAULT_PLAN))?.let { Snapshot(s, Schedule(it, s.anchor), d) }
+    val snapshot: Flow<Snapshot?> = combine(settings, done, garmin) { s, d, g -> Triple(s, d, g) }.mapLatest { (s, d, g) ->
+        (plan(s.planSlug) ?: plan(Settings.DEFAULT_PLAN))?.let { Snapshot(s, Schedule(it, s.anchor), d, g) }
+    }
+
+    suspend fun setGarminKey(key: String?, expires: LocalDate?) {
+        context.garminStore.edit {
+            it.clear()
+            if (key != null) {
+                it[GARMIN_KEY] = key
+                if (expires != null) it[GARMIN_EXPIRES] = expires.toString()
+            }
+        }
+    }
+
+    /** A cached access token and its expiry in epoch seconds. */
+    suspend fun garminToken(): Pair<String, Long>? = context.garminStore.data.first().let { p ->
+        p[GARMIN_TOKEN]?.let { t -> p[GARMIN_TOKEN_EXP]?.let { t to it } }
+    }
+
+    suspend fun saveGarminToken(token: String?, expires: Long?) {
+        context.garminStore.edit {
+            if (token == null || expires == null) { it.remove(GARMIN_TOKEN); it.remove(GARMIN_TOKEN_EXP) }
+            else { it[GARMIN_TOKEN] = token; it[GARMIN_TOKEN_EXP] = expires }
+        }
+    }
+
+    /** Sessions Garmin has ticked before, so a session unticked by hand stays unticked. */
+    suspend fun garminApplied(): Set<String> = context.garminStore.data.first()[GARMIN_APPLIED] ?: emptySet()
+
+    /**
+     * Records a sync: the activities fetched for [from]..[to] replace the cached
+     * ones in that range (so deleted activities go), and [ticked] sessions are
+     * ticked off. Every [matched] session is remembered, including ones already
+     * ticked by hand, so unticking one later sticks.
+     */
+    suspend fun saveGarminSync(
+        from: LocalDate,
+        to: LocalDate,
+        fetched: List<GarminActivity>,
+        ticked: Set<String>,
+        matched: Set<String> = ticked,
+    ) {
+        context.garminStore.edit { p ->
+            val kept = p.toGarmin().activities.filter { it.localDate.isBefore(from) || it.localDate.isAfter(to) }
+            p[GARMIN_ACTIVITIES] = json.encodeToString(kept + fetched)
+            p[GARMIN_APPLIED] = (p[GARMIN_APPLIED] ?: emptySet()) + ticked + matched
+            p[GARMIN_LAST_SYNC] = System.currentTimeMillis()
+            p.remove(GARMIN_ERROR)
+            p.remove(GARMIN_REJECTED)
+        }
+        if (ticked.isNotEmpty()) context.progressStore.edit { it[DONE] = (it[DONE] ?: emptySet()) + ticked }
+    }
+
+    suspend fun saveGarminError(message: String, keyRejected: Boolean) {
+        context.garminStore.edit {
+            it[GARMIN_ERROR] = message
+            it[GARMIN_REJECTED] = keyRejected
+        }
     }
 
     suspend fun currentSnapshot(): Snapshot? = snapshot.first()
@@ -181,7 +280,27 @@ class Repository(private val context: Context) {
         askedNotifyPermission = this[ASKED_NOTIFY] ?: false,
     )
 
+    private fun Preferences.toGarmin() = GarminState(
+        apiKey = this[GARMIN_KEY],
+        keyExpires = this[GARMIN_EXPIRES]?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+        lastSync = this[GARMIN_LAST_SYNC],
+        lastError = this[GARMIN_ERROR],
+        keyRejected = this[GARMIN_REJECTED] ?: false,
+        activities = this[GARMIN_ACTIVITIES]
+            ?.let { runCatching { json.decodeFromString<List<GarminActivity>>(it) }.getOrNull() }
+            .orEmpty(),
+    )
+
     private companion object {
+        val GARMIN_KEY = stringPreferencesKey("key")
+        val GARMIN_EXPIRES = stringPreferencesKey("key_expires")
+        val GARMIN_TOKEN = stringPreferencesKey("token")
+        val GARMIN_TOKEN_EXP = longPreferencesKey("token_exp")
+        val GARMIN_ACTIVITIES = stringPreferencesKey("activities")
+        val GARMIN_APPLIED = stringSetPreferencesKey("applied")
+        val GARMIN_LAST_SYNC = longPreferencesKey("last_sync")
+        val GARMIN_ERROR = stringPreferencesKey("error")
+        val GARMIN_REJECTED = booleanPreferencesKey("rejected")
         val DONE = stringSetPreferencesKey("done")
         val PLAN = stringPreferencesKey("plan")
         val ANCHOR = stringPreferencesKey("anchor")

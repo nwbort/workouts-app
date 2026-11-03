@@ -94,6 +94,7 @@ fun PlanScreen(
 private fun WeekHeader(snap: Snapshot, week: Int, days: List<Day>, onNotes: (Int) -> Unit) {
     val start = snap.schedule.weekStart(week)
     val km = snap.plan.weekInfo.firstOrNull { it.week == week }?.km ?: days.sumOf { it.km ?: 0.0 }
+    val ran = snap.kmRun(start, start.plusDays(6))
     val (done, required) = days.fold(0 to 0) { acc, d -> snap.progress(d).let { acc.first + it.first to acc.second + it.second } }
     val hasNotes = snap.plan.weekInfo.any { it.week == week && it.notes.isNotEmpty() }
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
@@ -106,6 +107,7 @@ private fun WeekHeader(snap: Snapshot, week: Int, days: List<Day>, onNotes: (Int
                 Text(
                     "${start.dayMonth()} – ${start.plusDays(6).dayMonth()}" +
                         (if (km > 0) " · ${km(km)} km" else "") +
+                        (ran?.let { " · ran %.1f".format(it) } ?: "") +
                         (if (required > 0) " · $done/$required done" else ""),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -143,14 +145,19 @@ private fun DayRow(snap: Snapshot, day: Day, today: LocalDate, onClick: () -> Un
         Spacer(Modifier.width(12.dp))
         Icon(kindIcon(mainKind(day)), null, Modifier.size(20.dp), tint = if (day.isRest) muted else MaterialTheme.colorScheme.primary)
         Spacer(Modifier.width(12.dp))
-        Text(
-            snap.title(day),
-            Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (day.isRest) muted else MaterialTheme.colorScheme.onSurface,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                snap.title(day),
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (day.isRest) muted else MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val ran = snap.kmRun(date, date)
+            if (ran != null) {
+                Text("Garmin: %.1f km".format(ran), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+        }
         when {
             required == 0 -> {}
             done == required -> Icon(Icons.Filled.CheckCircle, "Done", tint = MaterialTheme.colorScheme.primary)

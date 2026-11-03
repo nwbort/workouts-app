@@ -49,6 +49,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nwbort.workouts.data.Day
+import com.nwbort.workouts.data.GarminActivity
 import com.nwbort.workouts.data.Kind
 import com.nwbort.workouts.data.Session
 import com.nwbort.workouts.data.Snapshot
@@ -70,6 +71,7 @@ fun TodayScreen(
     onPlay: (Day, Int, Session) -> Unit,
     onNotes: (Int) -> Unit,
     onSetUpVideos: () -> Unit,
+    onGarminKey: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val sch = snap.schedule
@@ -98,6 +100,9 @@ fun TodayScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        if (snap.garmin.needsNewKey(today)) {
+            GarminKeyBanner(snap, today, onGarminKey)
         }
         val shown = first.plusDays(pager.currentPage.toLong())
         Row(
@@ -194,6 +199,10 @@ private fun DayPage(
                 }
             }
         }
+        val activities = snap.activitiesOn(snap.schedule.dateOf(day))
+        if (activities.isNotEmpty()) {
+            item { GarminCard(activities) }
+        }
         if (missingVideos && videos.tree == null) {
             item { VideoSetupBanner(onSetUpVideos) }
         }
@@ -217,6 +226,59 @@ private fun DayPage(
             }
         }
     }
+}
+
+@Composable
+private fun GarminKeyBanner(snap: Snapshot, today: LocalDate, onFix: () -> Unit) {
+    val left = snap.garmin.daysLeft(today)
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+    ) {
+        Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                when {
+                    snap.garmin.keyRejected || left == null || left < 0 -> "Garmin key no longer works: runs won't tick off"
+                    left == 0L -> "Garmin key expires today"
+                    else -> "Garmin key expires in ${plural(left, "day")}"
+                },
+                Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            TextButton(onClick = onFix) { Text("Replace") }
+        }
+    }
+}
+
+/** What Garmin recorded on a day, beside what the plan asked for. */
+@Composable
+private fun GarminCard(activities: List<GarminActivity>) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text("From Garmin", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            activities.forEach { a ->
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(kindIcon(if (a.isRun) Kind.RUN else if (a.isWalk) Kind.WALK else Kind.CROSS_TRAINING), null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        listOfNotNull(
+                            a.name.ifBlank { null },
+                            a.km?.let { "%.1f km".format(it) },
+                            a.durationS?.let(::duration),
+                        ).joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun duration(seconds: Double): String {
+    val s = seconds.toLong()
+    return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
 }
 
 @Composable
