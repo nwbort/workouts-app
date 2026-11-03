@@ -130,14 +130,6 @@ class AppTest {
         val opened = generateSequence { shadowOf(app).nextStartedActivity }.last { it.action == Intent.ACTION_VIEW }
         assertEquals(Garmin.activityUrl(1), opened.dataString)
         assertTrue(opened.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
-        compose.onNodeWithText("Settings").performClick()
-        compose.onNodeWithText("Sync now").performScrollTo()
-        compose.waitForIdle()
-        shot("9-settings-garmin")
-        compose.onNodeWithText("Disconnect").performClick()
-        compose.waitForIdle()
-        shot("10-garmin-disconnect")
-        compose.onNodeWithText("Cancel").performClick()
 
         // A tablet or desktop window: tabs on a rail, and the plan beside the
         // day rather than on a tab of its own.
@@ -171,6 +163,17 @@ class AppTest {
         compose.onNode(hasText("Settings") and isTab).performClick()
         compose.waitForIdle()
         shot("15-wide-settings")
+
+        // Back to the phone for the rest.
+        RuntimeEnvironment.setQualifiers("w411dp-h891dp-xxhdpi")
+        compose.activityRule.scenario.recreate()
+        compose.onNode(hasText("Settings") and isTab).performClick()
+        compose.onNodeWithText("Sync now").performScrollTo()
+        compose.waitForIdle()
+        shot("9-settings-garmin")
+        compose.onNodeWithText("Disconnect").performClick()
+        compose.waitForIdle()
+        shot("10-garmin-disconnect")
 
         // The player starts and stops cleanly. (Nothing to decode on the JVM.)
         val intent = PlayerActivity.intent(app, Uri.parse("content://none/strength-workout-9.mp4"), "Strength Workout 9", "1015976604")
