@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -25,6 +26,7 @@ import com.nwbort.workouts.data.Garmin
 import com.nwbort.workouts.data.GarminActivity
 import com.nwbort.workouts.notify.DailyScheduler
 import com.nwbort.workouts.ui.longDate
+import com.nwbort.workouts.ui.shortWeekday
 import com.nwbort.workouts.video.PlayerActivity
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -141,13 +143,11 @@ class AppTest {
         assertEquals(listOf("Today", "Videos", "Settings"), tabLabels())
         shot("11-wide-today")
 
-        // Picking a day in the plan shows it beside it. (One whose title no
-        // other day shares, so the row to tap is unambiguous.)
-        val snap = runBlocking { Graph.repo.currentSnapshot()!! }
-        val titles = snap.plan.days.groupingBy { snap.title(it) }.eachCount()
-        val later = (2L..6L).map { LocalDate.now().plusDays(it) }
-            .first { titles[snap.title(snap.schedule.dayAt(it)!!)] == 1 }
-        compose.onNodeWithText(snap.title(snap.schedule.dayAt(later)!!)).performClick()
+        // Picking a day in the plan shows it beside it.
+        val later = LocalDate.now().plusDays(3)
+        compose.onNode(
+            hasText(later.shortWeekday()) and hasText(later.dayOfMonth.toString()) and hasClickAction()
+        ).performClick()
         waitForText(later.longDate())
         shot("12-wide-other-day")
         compose.onNodeWithText("Back to today").performClick()
