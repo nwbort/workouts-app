@@ -94,7 +94,7 @@ fun WeekNotesScreen(snap: Snapshot, week: Int, onWeek: (Int) -> Unit, onBack: ()
                 Text(
                     notes[index].text,
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState()).readingWidth().padding(20.dp),
                 )
             }
         }
@@ -119,36 +119,38 @@ fun GlossaryScreen(entries: List<GlossaryEntry>, onBack: () -> Unit) {
             )
         },
     ) { padding ->
-        LazyColumn(
-            Modifier.padding(padding).fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            item {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search terms") },
-                    leadingIcon = { Icon(Icons.Filled.Search, null) },
-                    singleLine = true,
-                )
-            }
-            items(shown, key = { it.index }) { (i, e) ->
-                val expanded = open == i || query.isNotBlank()
-                Card(Modifier.fillMaxWidth().clickable { open = if (open == i) -1 else i }) {
-                    Column(Modifier.padding(16.dp).animateContentSize()) {
-                        Text(e.term, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        if (expanded) {
-                            Spacer(Modifier.height(8.dp))
-                            SelectionContainer { Text(e.definition, style = MaterialTheme.typography.bodyMedium) }
-                        } else {
-                            Text(
-                                e.definition.lineSequence().first(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                            )
+        WithGutter(min = 16.dp, modifier = Modifier.padding(padding)) { gutter ->
+            LazyColumn(
+                Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = gutter, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search terms") },
+                        leadingIcon = { Icon(Icons.Filled.Search, null) },
+                        singleLine = true,
+                    )
+                }
+                items(shown, key = { it.index }) { (i, e) ->
+                    val expanded = open == i || query.isNotBlank()
+                    Card(Modifier.fillMaxWidth().clickable { open = if (open == i) -1 else i }) {
+                        Column(Modifier.padding(16.dp).animateContentSize()) {
+                            Text(e.term, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            if (expanded) {
+                                Spacer(Modifier.height(8.dp))
+                                SelectionContainer { Text(e.definition, style = MaterialTheme.typography.bodyMedium) }
+                            } else {
+                                Text(
+                                    e.definition.lineSequence().first(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                )
+                            }
                         }
                     }
                 }

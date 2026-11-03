@@ -46,7 +46,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.nwbort.workouts.data.Garmin
@@ -90,7 +89,7 @@ fun SettingsScreen(
 
     Column(modifier.fillMaxSize()) {
         TopAppBar(title = { Text("Settings") }, windowInsets = WindowInsets(0))
-        Column(Modifier.verticalScroll(rememberScrollState())) {
+        Column(Modifier.verticalScroll(rememberScrollState()).readingWidth()) {
             Section("Plan")
             ListItem(
                 modifier = Modifier.clickable { dialog = "plan" },
@@ -313,7 +312,7 @@ fun SettingsScreen(
 
 @Composable
 private fun GarminKeyDialog(onDismiss: () -> Unit, onConnect: (String, LocalDate) -> Unit) {
-    val uri = LocalUriHandler.current
+    val context = LocalContext.current
     var key by rememberSaveable { mutableStateOf("") }
     var days by rememberSaveable { mutableStateOf(365) }
     AlertDialog(
@@ -327,7 +326,7 @@ private fun GarminKeyDialog(onDismiss: () -> Unit, onConnect: (String, LocalDate
                         "activities; it can't change anything in your account.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                TextButton(onClick = { uri.openUri(Garmin.KEY_PAGE) }) { Text("Open Garmin Connect") }
+                TextButton(onClick = { openLink(context, Garmin.KEY_PAGE) }) { Text("Open Garmin Connect") }
                 OutlinedTextField(
                     value = key,
                     onValueChange = { key = it.trim() },

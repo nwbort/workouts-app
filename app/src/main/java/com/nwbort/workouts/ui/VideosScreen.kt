@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -87,38 +88,40 @@ fun VideosScreen(
     Column(modifier.fillMaxSize()) {
         TopAppBar(title = { Text("Videos") }, windowInsets = WindowInsets(0))
         if (state.scanning) LinearProgressIndicator(Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize()) {
-            // Once a folder is chosen it's managed from Settings; this only
-            // comes back if Android stops letting the app read it.
-            if (state.tree == null || !state.treeReadable) {
-                item { FolderCard(state, onChoose = { pickFolder.launch(state.tree) }) }
-            }
-            entries.groupBy { it.group }.forEach { (group, items) ->
-                item(key = "g:$group") {
-                    Text(
-                        group,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 4.dp),
-                    )
+        WithGutter { gutter ->
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = gutter)) {
+                // Once a folder is chosen it's managed from Settings; this only
+                // comes back if Android stops letting the app read it.
+                if (state.tree == null || !state.treeReadable) {
+                    item { FolderCard(state, onChoose = { pickFolder.launch(state.tree) }) }
                 }
-                items(items, key = { it.id }) { entry ->
-                    VideoRow(
-                        entry = entry,
-                        uri = state.found[entry.id],
-                        linked = entry.id in state.linked,
-                        searched = state.tree != null && !state.scanning,
-                        thumbnails = thumbnails,
-                        onPlay = { onPlay(entry) },
-                        onLink = {
-                            linking = entry.id
-                            pickFile.launch(arrayOf("video/*"))
-                        },
-                        onUnlink = { onLink(entry.id, null) },
-                    )
+                entries.groupBy { it.group }.forEach { (group, items) ->
+                    item(key = "g:$group") {
+                        Text(
+                            group,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(items, key = { it.id }) { entry ->
+                        VideoRow(
+                            entry = entry,
+                            uri = state.found[entry.id],
+                            linked = entry.id in state.linked,
+                            searched = state.tree != null && !state.scanning,
+                            thumbnails = thumbnails,
+                            onPlay = { onPlay(entry) },
+                            onLink = {
+                                linking = entry.id
+                                pickFile.launch(arrayOf("video/*"))
+                            },
+                            onUnlink = { onLink(entry.id, null) },
+                        )
+                    }
                 }
+                item { Spacer(Modifier.height(24.dp)) }
             }
-            item { Spacer(Modifier.height(24.dp)) }
         }
     }
 }

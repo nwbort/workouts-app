@@ -47,10 +47,11 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nwbort.workouts.data.Day
 import com.nwbort.workouts.data.Garmin
@@ -97,65 +98,67 @@ fun TodayScreen(
         snapshotFlow { pager.settledPage }.collect { onSelect(first.plusDays(it.toLong())) }
     }
 
-    Column(modifier.fillMaxSize()) {
-        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp)) {
-            Text(snap.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-            Text(
-                snap.statusLine(today),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (snap.garmin.needsNewKey(today)) {
-            GarminKeyBanner(snap, today, onGarminKey)
-        }
-        val shown = first.plusDays(pager.currentPage.toLong())
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(
-                onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } },
-                enabled = pager.currentPage > 0,
-            ) { Icon(Icons.Filled.ChevronLeft, "Previous day") }
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+    WithGutter(modifier = modifier.fillMaxSize()) { gutter ->
+        Column(Modifier.fillMaxSize()) {
+            Column(Modifier.padding(start = 20.dp + gutter, end = 20.dp + gutter, top = 16.dp)) {
+                Text(snap.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    when (shown) {
-                        today -> "Today"
-                        today.plusDays(1) -> "Tomorrow"
-                        today.minusDays(1) -> "Yesterday"
-                        else -> shown.shortWeekday()
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    shown.longDate(),
-                    style = MaterialTheme.typography.bodySmall,
+                    snap.statusLine(today),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IconButton(
-                onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
-                enabled = pager.currentPage < count - 1,
-            ) { Icon(Icons.Filled.ChevronRight, "Next day") }
-        }
-        if (shown != today) {
-            TextButton(
-                onClick = { scope.launch { pager.animateScrollToPage(pageOf(today)) } },
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            ) { Text("Back to today") }
-        }
+            if (snap.garmin.needsNewKey(today)) {
+                GarminKeyBanner(snap, today, onGarminKey, Modifier.padding(horizontal = gutter))
+            }
+            val shown = first.plusDays(pager.currentPage.toLong())
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp + gutter, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(
+                    onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } },
+                    enabled = pager.currentPage > 0,
+                ) { Icon(Icons.Filled.ChevronLeft, "Previous day") }
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        when (shown) {
+                            today -> "Today"
+                            today.plusDays(1) -> "Tomorrow"
+                            today.minusDays(1) -> "Yesterday"
+                            else -> shown.shortWeekday()
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        shown.longDate(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(
+                    onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
+                    enabled = pager.currentPage < count - 1,
+                ) { Icon(Icons.Filled.ChevronRight, "Next day") }
+            }
+            if (shown != today) {
+                TextButton(
+                    onClick = { scope.launch { pager.animateScrollToPage(pageOf(today)) } },
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                ) { Text("Back to today") }
+            }
 
-        HorizontalPager(state = pager, modifier = Modifier.weight(1f), beyondViewportPageCount = 1) { page ->
-            val date = first.plusDays(page.toLong())
-            val day = sch.dayAt(date)
-            if (day == null) {
-                EmptyMessage(
-                    if (date.isBefore(sch.start)) "Before the plan starts" else "After the plan",
-                    "${snap.name} runs ${sch.start.fullDate()} – ${sch.end.fullDate()}.",
-                )
-            } else {
-                DayPage(snap, day, videos, onToggle, onPlay, onNotes, onSetUpVideos)
+            HorizontalPager(state = pager, modifier = Modifier.weight(1f), beyondViewportPageCount = 1) { page ->
+                val date = first.plusDays(page.toLong())
+                val day = sch.dayAt(date)
+                if (day == null) {
+                    EmptyMessage(
+                        if (date.isBefore(sch.start)) "Before the plan starts" else "After the plan",
+                        "${snap.name} runs ${sch.start.fullDate()} – ${sch.end.fullDate()}.",
+                    )
+                } else {
+                    DayPage(snap, day, videos, onToggle, onPlay, onNotes, onSetUpVideos, gutter)
+                }
             }
         }
     }
@@ -170,12 +173,13 @@ private fun DayPage(
     onPlay: (Day, Int, Session) -> Unit,
     onNotes: (Int) -> Unit,
     onSetUpVideos: () -> Unit,
+    gutter: Dp,
 ) {
     val (done, required) = snap.progress(day)
     val missingVideos = day.sessions.any { it.video != null && it.video !in videos.found }
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(start = 16.dp + gutter, end = 16.dp + gutter, top = 4.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
@@ -239,11 +243,11 @@ private fun DayPage(
 }
 
 @Composable
-private fun GarminKeyBanner(snap: Snapshot, today: LocalDate, onFix: () -> Unit) {
+private fun GarminKeyBanner(snap: Snapshot, today: LocalDate, onFix: () -> Unit, modifier: Modifier = Modifier) {
     val left = snap.garmin.daysLeft(today)
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+        modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
     ) {
         Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -281,16 +285,16 @@ private fun GarminCard(activities: List<GarminActivity>) {
 /**
  * One Garmin activity as a line of stats. Tapping it opens the activity in
  * Garmin Connect: the app if it's installed and handles the link, otherwise
- * the browser.
+ * the browser. Either way in its own task, not on top of this app's.
  */
 @Composable
 private fun GarminRow(a: GarminActivity, showName: Boolean, modifier: Modifier = Modifier) {
-    val uri = LocalUriHandler.current
+    val context = LocalContext.current
     Row(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .clickable(onClickLabel = "Open in Garmin Connect") { runCatching { uri.openUri(Garmin.activityUrl(a.id)) } }
+            .clickable(onClickLabel = "Open in Garmin Connect") { openLink(context, Garmin.activityUrl(a.id)) }
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

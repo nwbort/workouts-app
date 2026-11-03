@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +30,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +50,10 @@ fun PlanScreen(
     onNotes: (Int) -> Unit,
     onGlossary: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The day to pick out. In the wide layout it's the one the day pane shows. */
+    highlight: LocalDate = today,
+    /** True when it's the left-hand pane beside the day, under its own short title. */
+    asPane: Boolean = false,
 ) {
     val sch = snap.schedule
     val weeks = remember(snap.plan) { (1..snap.plan.weeks).map { w -> w to sch.daysOfWeek(w) } }
@@ -58,14 +64,29 @@ fun PlanScreen(
     }
     val list = rememberLazyListState(initialFirstVisibleItemIndex = startIndex)
 
+    // As a pane, keep the day being shown in view: when it's off screen, bring
+    // its week to the top.
+    if (asPane) {
+        LaunchedEffect(highlight, weeks) {
+            val week = sch.weekOf(highlight) ?: return@LaunchedEffect
+            val index = weeks.takeWhile { it.first < week }.sumOf { 1 + it.second.size }
+            val dayIndex = index + 1 + weeks[week - 1].second.indexOfFirst { sch.dateOf(it) == highlight }
+            val visible = list.layoutInfo.visibleItemsInfo
+            // The first visible row sits under the sticky header, so it doesn't count.
+            val shown = visible.drop(1).dropLast(1).any { it.index == dayIndex }
+            if (!shown) list.animateScrollToItem(index)
+        }
+    }
+
     Column(modifier.fillMaxSize()) {
         TopAppBar(
             windowInsets = WindowInsets(0),
             title = {
                 Column {
-                    Text(snap.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (asPane) "Plan" else snap.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        "${snap.plan.title} · ${sch.start.dayMonth()} – ${sch.end.fullDate()}",
+                        if (asPane) "${sch.start.dayMonth()} – ${sch.end.fullDate()}"
+                        else "${snap.plan.title} · ${sch.start.dayMonth()} – ${sch.end.fullDate()}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -79,11 +100,13 @@ fun PlanScreen(
                 }
             },
         )
-        LazyColumn(state = list, modifier = Modifier.fillMaxSize()) {
-            weeks.forEach { (week, days) ->
-                stickyHeader(key = "w$week") { WeekHeader(snap, week, days, onNotes) }
-                items(days, key = { "d${it.week}-${it.day}" }) { day ->
-                    DayRow(snap, day, today, onClick = { onOpenDay(sch.dateOf(day)) })
+        WithGutter { gutter ->
+            LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = gutter)) {
+                weeks.forEach { (week, days) ->
+                    stickyHeader(key = "w$week") { WeekHeader(snap, week, days, onNotes) }
+                    items(days, key = { "d${it.week}-${it.day}" }) { day ->
+                        DayRow(snap, day, today, highlight, onClick = { onOpenDay(sch.dateOf(day)) })
+                    }
                 }
             }
         }
@@ -121,15 +144,16 @@ private fun WeekHeader(snap: Snapshot, week: Int, days: List<Day>, onNotes: (Int
 }
 
 @Composable
-private fun DayRow(snap: Snapshot, day: Day, today: LocalDate, onClick: () -> Unit) {
+private fun DayRow(snap: Snapshot, day: Day, today: LocalDate, highlight: LocalDate, onClick: () -> Unit) {
     val date = snap.schedule.dateOf(day)
     val isToday = date == today
+    val picked = date == highlight
     val past = date.isBefore(today)
     val (done, required) = snap.progress(day)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         Modifier.fillMaxWidth()
-            .then(if (isToday) Modifier.background(MaterialTheme.colorScheme.secondaryContainer) else Modifier)
+            .then(if (picked) Modifier.background(MaterialTheme.colorScheme.secondaryContainer) else Modifier)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -140,6 +164,7 @@ private fun DayRow(snap: Snapshot, day: Day, today: LocalDate, onClick: () -> Un
                 date.dayOfMonth.toString(),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                color = if (isToday && !picked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             )
         }
         Spacer(Modifier.width(12.dp))
