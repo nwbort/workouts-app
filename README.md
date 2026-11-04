@@ -34,13 +34,13 @@ release.
 
 1. On the phone, open **github.com/nwbort/workouts-app/releases** (signed in,
    as the repo is private).
-2. Tap the newest `workouts-1.N.apk` and install it. Android asks once to
+2. Tap the newest `workouts-1.0.X.apk` and install it. Android asks once to
    allow installs from your browser.
 
-The version is `1.N`, where N goes up by one each time something lands on
+The version is `1.0.X`, where X goes up by one each time something lands on
 `main`. Builds from other branches aren't released; their APK is attached to
 the run on the Actions tab and named after the main version they're built on
-plus the run number, e.g. `workouts-1.9-b57.apk`. Every build, from any
+plus the run number, e.g. `workouts-1.0.30-57.apk`. Every build, from any
 branch, is signed with the same key and carries a higher hidden build number,
 so a new APK installs over the old one and keeps your ticks and settings.
 

@@ -6,7 +6,7 @@ plugins {
 
 // CI stamps every build with its run number as the versionCode, so each APK
 // installs over the previous one as an update. The versionName shown to people
-// is worked out by the workflow (1.N on main, 1.N-bRUN on other branches).
+// is worked out by the workflow (1.0.X on main, 1.0.X-RUN on other branches).
 // Local builds stay at 1.
 val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
 val buildVersionName = System.getenv("VERSION_NAME") ?: "0-local"
