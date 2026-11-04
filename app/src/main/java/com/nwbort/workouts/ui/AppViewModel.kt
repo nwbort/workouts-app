@@ -69,11 +69,12 @@ class AppViewModel(private val app: Application) : AndroidViewModel(app) {
     fun syncGarmin() = viewModelScope.launch {
         if (_garminSyncing.value) return@launch
         _garminSyncing.value = true
+        _messages.trySend("Syncing Garmin…")
         val r = try { garmin.sync() } finally { _garminSyncing.value = false }
         _messages.trySend(
             when (r) {
                 is GarminSync.Result.Synced ->
-                    "Garmin: ${r.activities} activit${if (r.activities == 1) "y" else "ies"}" +
+                    (if (r.new == 0) "No new Garmin activities" else "${r.new} new Garmin activit${if (r.new == 1) "y" else "ies"}") +
                         if (r.ticked > 0) ", ${r.ticked} session${if (r.ticked == 1) "" else "s"} ticked off" else ""
                 is GarminSync.Result.Failed -> r.message
                 GarminSync.Result.NotConnected -> "Garmin isn't connected"

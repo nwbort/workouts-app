@@ -32,7 +32,7 @@ class GarminSync(private val context: Context, private val repo: Repository, pri
     private val mutex = Mutex()
 
     sealed interface Result {
-        data class Synced(val activities: Int, val ticked: Int) : Result
+        data class Synced(val activities: Int, val ticked: Int, val new: Int = 0) : Result
         data class Failed(val message: String, val keyRejected: Boolean = false) : Result
         data object NotConnected : Result
     }
@@ -55,11 +55,12 @@ class GarminSync(private val context: Context, private val repo: Repository, pri
         // The plan so far, but no further back than 90 days: enough to fill
         // in ticks without pulling a whole year every few hours.
         val from = maxOf(snap.schedule.start, today.minusDays(LOOKBACK_DAYS)).let { if (it.isAfter(today)) today else it }
+        val known = repo.garmin.first().activities.mapTo(HashSet()) { it.id }
         val result = try {
             val fetched = withContext(Dispatchers.IO) { fetch(key, from, today) }
             val ticked = Garmin.autoTicks(snap, fetched, repo.garminApplied())
             repo.saveGarminSync(from, today, fetched, ticked, matched = Garmin.assign(snap, fetched).keys)
-            Result.Synced(fetched.size, ticked.size)
+            Result.Synced(fetched.size, ticked.size, new = fetched.count { it.id !in known })
         } catch (e: GarminAuthException) {
             repo.saveGarminToken(null, null)
             val msg = "Garmin turned the key down. It may have expired or been deleted: make a new one."
