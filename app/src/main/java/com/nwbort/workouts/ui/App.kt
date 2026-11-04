@@ -72,6 +72,7 @@ fun WorkoutsApp(vm: AppViewModel) {
     val context = LocalContext.current
 
     val garminSyncing by vm.garminSyncing.collectAsStateWithLifecycle()
+    val garminRefreshing by vm.garminRefreshing.collectAsStateWithLifecycle()
     LaunchedEffect(vm) {
         vm.messages.collect { toast(context, it) }
     }
@@ -139,6 +140,8 @@ fun WorkoutsApp(vm: AppViewModel) {
                             onNotes = openNotes,
                             onSetUpVideos = { tab = Tab.Videos },
                             onGarminKey = { tab = Tab.Settings },
+                            garminRefreshing = garminRefreshing,
+                            onRefreshGarmin = { vm.refreshGarmin() },
                             modifier = m,
                         )
                     }
@@ -152,6 +155,8 @@ fun WorkoutsApp(vm: AppViewModel) {
                                 onGlossary = openGlossary,
                                 highlight = selectedDate,
                                 asPane = true,
+                                garminRefreshing = garminRefreshing,
+                                onRefreshGarmin = { vm.refreshGarmin() },
                                 modifier = Modifier.width(if (width >= 1200.dp) 400.dp else 340.dp).fillMaxHeight(),
                             )
                             VerticalDivider()
@@ -171,6 +176,8 @@ fun WorkoutsApp(vm: AppViewModel) {
                     onNotes = openNotes,
                     onGlossary = openGlossary,
                     modifier = mod,
+                    garminRefreshing = garminRefreshing,
+                    onRefreshGarmin = { vm.refreshGarmin() },
                 )
                 Tab.Videos -> VideosScreen(
                     entries = vm.videoEntries,

@@ -78,6 +78,8 @@ fun TodayScreen(
     onNotes: (Int) -> Unit,
     onSetUpVideos: () -> Unit,
     onGarminKey: () -> Unit = {},
+    garminRefreshing: Boolean = false,
+    onRefreshGarmin: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val sch = snap.schedule
@@ -148,16 +150,23 @@ fun TodayScreen(
                 ) { Text("Back to today") }
             }
 
-            HorizontalPager(state = pager, modifier = Modifier.weight(1f), beyondViewportPageCount = 1) { page ->
-                val date = first.plusDays(page.toLong())
-                val day = sch.dayAt(date)
-                if (day == null) {
-                    EmptyMessage(
-                        if (date.isBefore(sch.start)) "Before the plan starts" else "After the plan",
-                        "${snap.name} runs ${sch.start.fullDate()} – ${sch.end.fullDate()}.",
-                    )
-                } else {
-                    DayPage(snap, day, videos, onToggle, onPlay, onNotes, onSetUpVideos, gutter)
+            GarminRefresh(
+                enabled = snap.garmin.connected,
+                refreshing = garminRefreshing,
+                onRefresh = onRefreshGarmin,
+                modifier = Modifier.weight(1f),
+            ) {
+                HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
+                    val date = first.plusDays(page.toLong())
+                    val day = sch.dayAt(date)
+                    if (day == null) {
+                        EmptyMessage(
+                            if (date.isBefore(sch.start)) "Before the plan starts" else "After the plan",
+                            "${snap.name} runs ${sch.start.fullDate()} – ${sch.end.fullDate()}.",
+                        )
+                    } else {
+                        DayPage(snap, day, videos, onToggle, onPlay, onNotes, onSetUpVideos, gutter)
+                    }
                 }
             }
         }

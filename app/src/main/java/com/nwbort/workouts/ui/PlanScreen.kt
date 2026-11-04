@@ -54,6 +54,8 @@ fun PlanScreen(
     highlight: LocalDate = today,
     /** True when it's the left-hand pane beside the day, under its own short title. */
     asPane: Boolean = false,
+    garminRefreshing: Boolean = false,
+    onRefreshGarmin: () -> Unit = {},
 ) {
     val sch = snap.schedule
     val weeks = remember(snap.plan) { (1..snap.plan.weeks).map { w -> w to sch.daysOfWeek(w) } }
@@ -100,12 +102,14 @@ fun PlanScreen(
                 }
             },
         )
-        WithGutter { gutter ->
-            LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = gutter)) {
-                weeks.forEach { (week, days) ->
-                    stickyHeader(key = "w$week") { WeekHeader(snap, week, days, onNotes) }
-                    items(days, key = { "d${it.week}-${it.day}" }) { day ->
-                        DayRow(snap, day, today, highlight, onClick = { onOpenDay(sch.dateOf(day)) })
+        GarminRefresh(snap.garmin.connected, garminRefreshing, onRefreshGarmin, Modifier.fillMaxSize()) {
+            WithGutter { gutter ->
+                LazyColumn(state = list, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = gutter)) {
+                    weeks.forEach { (week, days) ->
+                        stickyHeader(key = "w$week") { WeekHeader(snap, week, days, onNotes) }
+                        items(days, key = { "d${it.week}-${it.day}" }) { day ->
+                            DayRow(snap, day, today, highlight, onClick = { onOpenDay(sch.dateOf(day)) })
+                        }
                     }
                 }
             }
