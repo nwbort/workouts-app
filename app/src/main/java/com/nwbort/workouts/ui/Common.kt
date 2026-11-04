@@ -1,10 +1,18 @@
 package com.nwbort.workouts.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
@@ -24,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nwbort.workouts.data.Kind
 import java.time.LocalDate
@@ -75,3 +84,46 @@ fun EmptyMessage(title: String, body: String? = null, modifier: Modifier = Modif
         }
     }
 }
+
+/**
+ * Opens a link in whatever handles it (the Garmin Connect app, or a browser)
+ * as its own task, so it shows up as a separate app in Recents instead of
+ * being stacked inside this one.
+ */
+fun openLink(context: Context, url: String) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        .addCategory(Intent.CATEGORY_BROWSABLE)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        // Nothing to open it with; leave it.
+    }
+}
+
+/** Window widths, as Material's window size classes draw them. */
+const val MEDIUM_WIDTH = 600
+const val EXPANDED_WIDTH = 840
+
+/** How wide a column of text or cards gets before it stops growing and centres. */
+val READING_WIDTH: Dp = 720.dp
+
+/**
+ * Gives [content] the side gutter that keeps it [READING_WIDTH] wide and
+ * centred, but never less than [min]. Used as padding inside scrolling
+ * containers rather than narrowing them, so a mouse wheel or a swipe in the
+ * margins still scrolls.
+ */
+@Composable
+fun WithGutter(min: Dp = 0.dp, modifier: Modifier = Modifier, content: @Composable (gutter: Dp) -> Unit) {
+    BoxWithConstraints(modifier) {
+        content(maxOf(min, (maxWidth - READING_WIDTH) / 2 + min))
+    }
+}
+
+/**
+ * Centres content at [READING_WIDTH]. Goes after a scroll modifier, so the
+ * scrolling area itself still spans the window.
+ */
+fun Modifier.readingWidth(): Modifier =
+    fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = READING_WIDTH)

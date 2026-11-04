@@ -3,6 +3,7 @@ package com.nwbort.workouts
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationManager
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -10,6 +11,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -23,13 +25,17 @@ import androidx.test.core.app.ActivityScenario
 import com.nwbort.workouts.data.Garmin
 import com.nwbort.workouts.data.GarminActivity
 import com.nwbort.workouts.notify.DailyScheduler
+import com.nwbort.workouts.ui.longDate
+import com.nwbort.workouts.ui.shortWeekday
 import com.nwbort.workouts.video.PlayerActivity
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
@@ -93,7 +99,7 @@ class AppTest {
 
         // Tapping the widget lands on today's page from anywhere, even with a
         // screen open on top of another tab. (Settings has a "Plan" heading too.)
-        compose.onNode(hasText("Plan") and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)).performClick()
+        compose.onNode(hasText("Plan") and isTab).performClick()
         compose.onNodeWithContentDescription("Week 11 notes").performClick()
         waitForText("Week 11 notes")
         compose.runOnUiThread { compose.activity.onNewIntent(MainActivity.showToday(compose.activity)) }
@@ -120,7 +126,48 @@ class AppTest {
         waitForText("2 of 3 done")
         waitForText("Garmin key expires in 5 days")
         shot("8-today-garmin")
-        compose.onNodeWithText("Settings").performClick()
+        // Opening the activity hands it to Garmin Connect (or the browser) as
+        // a task of its own, not stacked inside this app's.
+        compose.onNodeWithText("Garmin · 10.2 km · 58:09 · 5:40 /km").performClick()
+        val opened = generateSequence { shadowOf(app).nextStartedActivity }.last { it.action == Intent.ACTION_VIEW }
+        assertEquals(Garmin.activityUrl(1), opened.dataString)
+        assertTrue(opened.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
+
+        // A tablet or desktop window: tabs on a rail, and the plan beside the
+        // day rather than on a tab of its own.
+        RuntimeEnvironment.setQualifiers("w1280dp-h800dp-mdpi")
+        compose.activityRule.scenario.recreate()
+        compose.onNode(hasText("Today") and isTab).performClick()
+        waitForText("Week 11")
+        waitForText("2 of 3 done")
+        assertEquals(listOf("Today", "Videos", "Settings"), tabLabels())
+        shot("11-wide-today")
+
+        // Picking a day in the plan shows it beside it.
+        val later = LocalDate.now().plusDays(3)
+        compose.onNode(
+            hasText(later.shortWeekday()) and hasText(later.dayOfMonth.toString()) and hasClickAction()
+        ).performClick()
+        waitForText(later.longDate())
+        shot("12-wide-other-day")
+        compose.onNodeWithText("Back to today").performClick()
+        waitForText("2 of 3 done")
+
+        compose.onNodeWithContentDescription("Week 11 notes").performClick()
+        waitForText("Week 11 notes")
+        shot("13-wide-week-notes")
+        back()
+        compose.onNode(hasText("Videos") and isTab).performClick()
+        compose.waitForIdle()
+        shot("14-wide-videos")
+        compose.onNode(hasText("Settings") and isTab).performClick()
+        compose.waitForIdle()
+        shot("15-wide-settings")
+
+        // Back to the phone for the rest.
+        RuntimeEnvironment.setQualifiers("w411dp-h891dp-xxhdpi")
+        compose.activityRule.scenario.recreate()
+        compose.onNode(hasText("Settings") and isTab).performClick()
         compose.onNodeWithText("Sync now").performScrollTo()
         compose.waitForIdle()
         shot("9-settings-garmin")
@@ -135,6 +182,11 @@ class AppTest {
             it.moveToState(Lifecycle.State.CREATED)
         }
     }
+
+    private val isTab = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
+
+    private fun tabLabels() = compose.onAllNodes(isTab).fetchSemanticsNodes()
+        .map { it.config[SemanticsProperties.Text].joinToString() }
 
     private fun waitForText(text: String) =
         compose.waitUntil(10_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
