@@ -16,6 +16,27 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v7
+        with:
+          # Full history, to count main's commits for the version.
+          fetch-depth: 0
+
+      # The version people see only moves when something lands on main:
+      # 1.0.X, where X counts main's commits (one per merged PR), offset so it
+      # carries on from the old run-number versions (main at 9 commits was
+      # v1.0.30). Other branches show the main version they're built on plus
+      # the run number, 1.0.X-RUN. The
+      # hidden versionCode is the run number either way, so every APK, from
+      # any branch, installs over the last one.
+      - name: Work out the version
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            version="1.0.$(( $(git rev-list --count --first-parent HEAD) + 21 ))"
+          else
+            base="$(git merge-base HEAD origin/main)"
+            version="1.0.$(( $(git rev-list --count --first-parent "$base") + 21 ))-${GITHUB_RUN_NUMBER}"
+          fi
+          echo "VERSION_NAME=${version}" >> "$GITHUB_ENV"
+          echo "Version ${version} (code ${GITHUB_RUN_NUMBER})"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v6
@@ -26,15 +47,13 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      # GITHUB_RUN_NUMBER becomes the versionCode, so every build installs
-      # over the last one as an update.
       - name: Test and build the release APK
         run: ./gradlew testDebugUnitTest assembleRelease --stacktrace
 
       - name: Name the APK after its version
         id: apk
         run: |
-          version="1.0.${GITHUB_RUN_NUMBER}"
+          version="${VERSION_NAME}"
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk "dist/workouts-${version}.apk"
           echo "version=${version}" >> "$GITHUB_OUTPUT"

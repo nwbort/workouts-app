@@ -4,9 +4,12 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// CI stamps every build with its run number, so each APK installs over the
-// previous one as an update. Local builds stay at 1.
+// CI stamps every build with its run number as the versionCode, so each APK
+// installs over the previous one as an update. The versionName shown to people
+// is worked out by the workflow (1.0.X on main, 1.0.X-RUN on other branches).
+// Local builds stay at 1.
 val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+val buildVersionName = System.getenv("VERSION_NAME") ?: "0-local"
 
 android {
     namespace = "com.nwbort.workouts"
@@ -18,7 +21,7 @@ android {
         minSdk = 36
         targetSdk = 37
         versionCode = buildNumber
-        versionName = "1.0.$buildNumber"
+        versionName = buildVersionName
     }
 
     signingConfigs {

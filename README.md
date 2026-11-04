@@ -29,17 +29,20 @@ and a **home screen widget** showing today with its ticks.
 
 ## Install
 
-Every push builds the app on GitHub Actions and publishes it as a release.
+Every push to `main` builds the app on GitHub Actions and publishes it as a
+release.
 
 1. On the phone, open **github.com/nwbort/workouts-app/releases** (signed in,
    as the repo is private).
-2. Tap the newest `workouts-1.0.N.apk` and install it. Android asks once to
+2. Tap the newest `workouts-1.0.X.apk` and install it. Android asks once to
    allow installs from your browser.
 
-Each build has a higher version number and is signed with the same key, so a
-new APK installs over the old one and keeps your ticks and settings. Builds
-from branches other than `main` are marked *pre-release* but install the same
-way. The APK is also attached to each run on the Actions tab.
+The version is `1.0.X`, where X goes up by one each time something lands on
+`main`. Builds from other branches aren't released; their APK is attached to
+the run on the Actions tab and named after the main version they're built on
+plus the run number, e.g. `workouts-1.0.30-57.apk`. Every build, from any
+branch, is signed with the same key and carries a higher hidden build number,
+so a new APK installs over the old one and keeps your ticks and settings.
 
 ## First run
 
