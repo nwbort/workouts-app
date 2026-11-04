@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -68,16 +69,32 @@ class AppViewModel(private val app: Application) : AndroidViewModel(app) {
     fun syncGarmin() = viewModelScope.launch {
         if (_garminSyncing.value) return@launch
         _garminSyncing.value = true
+        _messages.trySend("Syncing Garmin…")
         val r = try { garmin.sync() } finally { _garminSyncing.value = false }
         _messages.trySend(
             when (r) {
                 is GarminSync.Result.Synced ->
-                    "Garmin: ${r.activities} activit${if (r.activities == 1) "y" else "ies"}" +
+                    (if (r.new == 0) "No new Garmin activities" else "${r.new} new Garmin activit${if (r.new == 1) "y" else "ies"}") +
                         if (r.ticked > 0) ", ${r.ticked} session${if (r.ticked == 1) "" else "s"} ticked off" else ""
                 is GarminSync.Result.Failed -> r.message
                 GarminSync.Result.NotConnected -> "Garmin isn't connected"
             }
         )
+    }
+
+    private val _garminRefreshing = MutableStateFlow(false)
+    /** A pull to refresh is waiting on Garmin. Background syncs on resume don't show. */
+    val garminRefreshing: StateFlow<Boolean> = _garminRefreshing.asStateFlow()
+
+    /** Pull to refresh: sync now, or wait out a sync that's already going. */
+    fun refreshGarmin() = viewModelScope.launch {
+        if (_garminRefreshing.value) return@launch
+        _garminRefreshing.value = true
+        try {
+            if (_garminSyncing.value) _garminSyncing.first { !it } else syncGarmin().join()
+        } finally {
+            _garminRefreshing.value = false
+        }
     }
 
     fun connectGarmin(key: String, expires: LocalDate) = viewModelScope.launch {
